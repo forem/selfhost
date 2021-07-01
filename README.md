@@ -15,7 +15,7 @@ We can't wait to see the community you selfhost with Forem!
 - Git
 - [Python 3.x](https://www.python.org/downloads/) and pip3
     - Mac OS: `brew install pip3`
-- [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/index.html) 2.10 or greater
+- [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/index.html): `ansible-core` 2.11 or greater (provided by Ansible 4.0.0)
 - [Butane](https://github.com/coreos/butane/blob/master/docs/getting-started.md#getting-butane)
     - Mac OS: `brew install butane`
 - pwgen
