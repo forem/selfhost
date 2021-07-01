@@ -1,0 +1,43 @@
+---
+- name: Check for FCOS file download
+  ansible.builtin.stat:
+    path: "{{ fcos_storage_location }}/{{ fcos_download_basename }}"
+  register: fcos_storage_location_file_stat
+
+- name: "Fail if {{ fcos_storage_location }}/{{ fcos_download_basename }} does not exist"
+  ansible.builtin.fail:
+    msg: "{{ fcos_storage_location }}/{{ fcos_download_basename }} does not exist! Please download it and place it at {{ fcos_storage_location }}/{{ fcos_download_basename }}"
+  when: not fcos_storage_location_file_stat.stat.exists
+
+- name: Stat FCOS extract file
+  ansible.builtin.stat:
+    path: "{{ fcos_extraction_location }}/{{ fcos_download_basename | splitext | first }}"
+  register: fcos_extract_file_stat
+
+- name: Stat FCOS compressed file
+  ansible.builtin.stat:
+    path: "{{ fcos_storage_location }}/{{ fcos_download_basename }}"
+    get_mime: true
+  register: fcos_compressed_file_stat
+
+- name: "Print skip extraction warning when {{ fcos_extraction_location }}/{{ fcos_download_basename | splitext | first }} exists"
+  ansible.builtin.debug:
+    msg: "The extracted file {{ fcos_extraction_location }}/{{ fcos_download_basename }} exists!! Skipping extraction!"
+  when: fcos_extract_file_stat.stat.exists
+
+- name: Extract FCOS image with xz
+  block:
+  - name: Check for unxz
+    shell: "which unxz"
+    register: unxz_check
+    ignore_errors: true
+
+  - name: Fail if unxz is not installed
+    fail:
+      msg: "Hey, unxz is not installed! You need to install it first."
+    when: unxz_check.rc != 0
+
+  - name: "Extract FCOS file to {{ fcos_extraction_location }} with xz"
+    shell: "xz --decompress -k {{ fcos_storage_location }}/{{ fcos_download_basename }} -c > {{ fcos_extraction_location }}/{{ fcos_download_basename | splitext | first }}"
+
+  when: not fcos_extract_file_stat.stat.exists and fcos_compressed_file_stat.stat.mimetype == "application/x-xz"

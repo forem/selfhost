@@ -1,0 +1,126 @@
+---
+- name: Deploy Forem to Google Compute
+  hosts: all
+  become: false
+
+  collections:
+    - google.cloud
+
+  vars:
+    fcos_arch: x86_64
+    fcos_platform: gcp
+    fcos_format: tar.gz
+    fcos_stream: stable
+    forem_gcp_region: us-central1
+    forem_gcp_zone: a
+    forem_gcp_machine_type: e2-small
+    forem_gcp_disk_size: 100
+    forem_gcp_project: forem-selfhost
+    forem_gcp_cred_kind: serviceaccount
+    forem_gcp_cred_file: "~/.gcp/forem.json"
+    butane_cleanup: true
+
+  roles:
+  - preflight
+
+  tasks:
+  - name: Get FCOS facts
+    include_role:
+      name: fcos
+      tasks_from: facts
+
+  - name: Convert butane file to an Ignition file
+    include_role:
+      name: butane
+      tasks_from: butane
+    vars:
+      butane_input_template: "../templates/forem.yml.j2"
+
+  - name: Create a FCOS disk
+    google.cloud.gcp_compute_disk:
+      name: "forem-{{ app_domain |replace('.', '-') }}"
+      size_gb: "{{ forem_gcp_disk_size }}"
+      source_image: "projects/fedora-coreos-cloud/global/images/family/fedora-coreos-{{ fcos_stream }}"
+      zone: "{{forem_gcp_region }}-{{ forem_gcp_zone }}"
+      project: "{{ forem_gcp_project }}"
+      auth_kind: "{{ forem_gcp_cred_kind }}"
+      service_account_file: "{{ forem_gcp_cred_file }}"
+      state: present
+    register: forem_gcp_disk
+
+  - name: "Allow SSH from {{ local_wan_ip_address }}/32"
+    google.cloud.gcp_compute_firewall:
+      name: "allow-ssh-forem-{{ app_domain |replace('.', '-') }}"
+      allowed:
+      - ip_protocol: tcp
+        ports:
+        - '22'
+      source_ranges:
+        - "{{ local_wan_ip_address }}/32"
+      project: "{{ forem_gcp_project }}"
+      auth_kind: "{{ forem_gcp_cred_kind }}"
+      service_account_file: "{{ forem_gcp_cred_file }}"
+      state: present
+
+  - name: "Allow HTTP and HTTPS from 0.0.0.0/0"
+    google.cloud.gcp_compute_firewall:
+      name: "allow-web-forem-{{ app_domain |replace('.', '-') }}"
+      allowed:
+      - ip_protocol: tcp
+        ports:
+        - '80'
+        - '443'
+      source_ranges:
+        - "0.0.0.0/0"
+      project: "{{ forem_gcp_project }}"
+      auth_kind: "{{ forem_gcp_cred_kind }}"
+      service_account_file: "{{ forem_gcp_cred_file }}"
+      state: present
+
+  - name: Create an IPv4 address
+    gcp_compute_address:
+      name: "forem-{{ app_domain |replace('.', '-') }}"
+      region: "{{ forem_gcp_region }}"
+      project: "{{ forem_gcp_project }}"
+      auth_kind: "{{ forem_gcp_cred_kind }}"
+      service_account_file: "{{ forem_gcp_cred_file }}"
+      state: present
+    register: forem_gcp_address
+
+  - name: Create a Forem instance
+    gcp_compute_instance:
+      name: "forem-{{ app_domain |replace('.', '-') }}"
+      machine_type: "{{ forem_gcp_machine_type }}"
+      disks:
+        - auto_delete: false
+          boot: true
+          source: "{{ forem_gcp_disk }}"
+      network_interfaces:
+        - network: null
+          access_configs:
+          - name: 'External NAT'
+            nat_ip: "{{ forem_gcp_address }}"
+            type: 'ONE_TO_ONE_NAT'
+      tags:
+        items:
+        - "allow-ssh-forem-{{ app_domain |replace('.', '-') }}"
+        - "allow-web-forem-{{ app_domain |replace('.', '-') }}"
+      labels:
+        app: forem
+      zone: "{{forem_gcp_region }}-{{ forem_gcp_zone }}"
+      project: "{{ forem_gcp_project }}"
+      auth_kind: "{{ forem_gcp_cred_kind }}"
+      service_account_file: "{{ forem_gcp_cred_file }}"
+      metadata:
+        user-data: "{{ butane_ignition_stdout | to_json | string }}"
+      state: present
+    register: forem_gcp_instance
+
+  - name: Output Google Compute instance setup message
+    ansible.builtin.debug:
+      msg:
+      - "The public IPv4 IP Address for {{ app_domain }} is {{ forem_gcp_address.address }}"
+      - "Please add an A entry for {{ app_domain }} that points to {{ forem_gcp_address.address }}"
+      - "Example:"
+      - "    {{ app_domain }} IN A {{ forem_gcp_address.address }}"
+      - "Once you have DNS resolving to this Google Compute VM please read the Forem Admin Docs: https://forem-admin.netlify.app/"

@@ -1,0 +1,11 @@
+---
+# tasks file for fcos
+
+- name: Get FCOS facts
+  include_tasks: facts.yml
+
+- name: Download FCOS files
+  include_tasks: download.yml
+
+- name: Extract FCOS image
+  include_tasks: extract.yml

@@ -1,0 +1,4 @@
+---
+# defaults file for preflight
+
+ansible_version_required: "2.11.0"

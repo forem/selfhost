@@ -1,0 +1,43 @@
+---
+# tasks file for preflight
+
+- name: Fetch public WAN IP json
+  ansible.builtin.uri:
+    url: https://icanhazip.com/
+    return_content: yes
+  changed_when: no
+  register: local_wan_json
+
+- name: Set local_wan_ip_address fact
+  ansible.builtin.set_fact:
+    local_wan_ip_address:  "{{ local_wan_json.content | trim }}"
+    # local_wan_ip_address:  "{{ local_wan_json.json | community.general.json_query('ip') }}"
+
+- name: "Verify Ansible is >= {{ ansible_version_required }}"
+  ansible.builtin.assert:
+    that: "ansible_version.full is version_compare('{{ ansible_version_required }}', '>=')"
+    msg: "You must have Ansible {{ ansible_version_required }} or greater to continue!"
+
+- name: Get list of installed Python 3 packages
+  ansible.builtin.shell: "pip3 list | cut -f 1 -d ' '|sed '1,2d'"
+  register: python_installed_packages
+
+- name: Read requirements.txt
+  ansible.builtin.set_fact:
+    python_requirements_txt: "{{ lookup('file', '../../../requirements.txt').splitlines() }}"
+
+- name: Generate list of missing pip prerequisites
+  ansible.builtin.set_fact:
+    python_required_packages: |
+      {% for item in python_requirements_txt %}
+      {{ item.split('=')[0] }}
+      {% endfor %}
+
+- name: Generate list of missing python packages
+  set_fact:
+    missing_python_packages: "{{ python_required_packages.splitlines() | difference(python_installed_packages.stdout_lines) }}"
+
+- name: Verify that required Python 3 packages are installed
+  ansible.builtin.assert:
+    that: "{{ missing_python_packages | length == 0 }}"
+    msg: "You are missing some of the required Python 3 packages: {{ missing_python_packages }} Run pip3 install -r requirements.txt"

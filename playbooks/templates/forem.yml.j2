@@ -1,0 +1,1159 @@
+variant: fcos
+version: 1.3.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - {{ ssh_key }}
+
+storage:
+  directories:
+  - path: /opt/ansible
+    mode: 0755
+
+  - path: /opt/forem/envs
+    mode: 0750
+
+  - path: /opt/forem/configs
+    mode: 0750
+
+  - path: /opt/forem/data
+    mode: 0750
+
+  - path: /opt/forem/data/postgresql
+    mode: 0750
+
+  - path: /opt/forem/data/redis
+    mode: 0750
+
+  - path: /opt/forem/data/uploads
+    mode: 0750
+
+  - path: /opt/forem/configs/traefik
+    mode: 0750
+
+  - path: /opt/forem/tmp
+    mode: 0755
+
+  files:
+  - path: /etc/forem/services/versions
+    mode: 0644
+    contents:
+      inline: |
+        ANSIBLE_CONTAINER_IMAGE=quay.io/forem/ansible:release
+        IMGPROXY_CONTAINER_IMAGE=docker.io/darthsim/imgproxy:v2
+        POSTGRES_CONTAINER_IMAGE=docker.io/library/postgres:11
+        REDIS_CONTAINER_IMAGE=docker.io/library/redis:6.0.1
+        OPENRESTY_CONTAINER_IMAGE=quay.io/forem/openresty:1.17.8.2
+        TRAEFIK_CONTAINER_IMAGE=docker.io/library/traefik:2.3.0
+
+  - path: /opt/forem/version
+    mode: 0644
+    contents:
+      inline: |
+        CONTAINER={{ forem_container_tag }}
+
+  - path: /etc/sudoers.d/forem
+    mode: 0640
+    contents:
+      inline: |
+        core ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart forem.service
+        core ALL=(ALL) NOPASSWD: /usr/bin/systemctl start forem.service
+        core ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop forem.service
+        core ALL=(ALL) NOPASSWD: /usr/bin/podman image prune -f
+        core ALL=(ALL) NOPASSWD: /usr/bin/podman pull quay.io/forem/forem\:*
+        core ALL=(ALL) NOPASSWD: /usr/bin/podman exec --env RUBYOPT\=-W0 --env DD_TRACE_STARTUP_LOGS\=false -it forem-rails bundle exec rake forem\:health_check_token
+
+  - path: /etc/ld.so.conf.d/python.conf
+    mode: 0644
+    contents:
+      inline: |
+        /usr/local/lib
+
+  - path: /usr/local/bin/fcos_python
+    mode: 0755
+    contents:
+      inline: |
+        #!/usr/bin/env bash
+        source /etc/forem/services/versions
+
+        show_help() {
+          echo
+          echo "Usage: fcos_python {enable|disable|help}"
+          exit 0
+        }
+
+        case $1 in
+
+              enable)
+                echo "Enabling Python 3.8"
+                /usr/bin/podman pull $ANSIBLE_CONTAINER_IMAGE
+                mount --bind $(/usr/bin/podman image mount $ANSIBLE_CONTAINER_IMAGE) /opt/ansible/
+                ln -sfv /opt/ansible/usr/bin/python /usr/local/bin/python
+                ln -sfv /opt/ansible/usr/lib64/libpython3.8.so.1.0 /usr/local/lib/libpython3.8.so.1.0
+                ln -sfv /opt/ansible/usr/lib64/python3.8/ /usr/local/lib/
+                ldconfig
+                ;;
+
+              disable)
+                echo "Disabling Python 3.8"
+                rm -f /usr/local/lib/libpython3.8.so.1.0
+                rm -f /usr/local/bin/python
+                rm -f /usr/local/lib/python3.8
+                ldconfig
+                umount /opt/ansible/
+                /usr/bin/podman image umount $ANSIBLE_CONTAINER_IMAGE
+                ;;
+
+              help)
+                show_help
+                ;;
+
+              *)
+                printf "Unknown command!"
+                show_help
+                exit 1
+                ;;
+
+        esac
+
+  - path: /usr/local/bin/foremimg
+    mode: 0755
+    contents:
+      inline: |
+        #!/usr/bin/env bash
+
+        set -euo pipefail
+
+        if [ "$EUID" -ne 0 ]; then
+          echo "Please run as the root user"
+          echo "Example: sudo foremimg"
+          exit 1
+        fi
+
+        VERSION_FILE=/opt/forem/version
+
+        show_help() {
+          echo ""
+          echo "Usage: foremimg {help|rollback|show}"
+          echo ""
+          echo "help            Show this message"
+          echo "rollback        Issue a rollback"
+          echo ""
+          echo "show            Show tags: current|rollback"
+          echo "  current       Show what image is tagged with current"
+          echo "  rollback      Show what image is tagged with rollback"
+          echo ""
+          echo "Running foremimg with no flags will read ${VERSION_FILE} if present for the"
+          echo "container tag or write ${VERSION_FILE} with the default tag quay.io/forem/forem:latest"
+          echo ""
+          echo "Running foremimg quay.io/forem/forem:testing will write quay.io/forem/forem:testing"
+          echo "to ${VERSION_FILE} and pull this container and point the local container"
+          echo "image tag 'localhost/forem/forem:current' to 'quay.io/forem/forem:testing'"
+          echo "and point the previous image to 'localhost/forem/forem:rollback'"
+          echo ""
+          echo "Rollbacks:"
+          echo "Running 'foremimg rollback' will swap 'localhost/forem/forem:rollback' with 'localhost/forem/forem:current'"
+          exit 0
+        }
+
+        show() {
+
+          local SHOW_CONTAINER=${1}
+
+          if ! podman image exists localhost/forem/forem:$SHOW_CONTAINER; then
+            echo "There is no Forem $SHOW_CONTAINER container image to show! Exiting..."
+            exit 1
+          fi
+
+          local CONTAINER_ID=$(podman images -n --format {% raw %}"{{.ID}}"{% endraw %} localhost/forem/forem:${SHOW_CONTAINER}|head -1)
+          local CONTAINER_BASE=$(podman images -n --format {% raw %}"{{.Repository}}:{{.Tag}}"{% endraw %} localhost/forem/forem:${SHOW_CONTAINER}|head -1)
+          local CONTAINER_ALIAS=$(podman images -n --format {% raw %}"{{.Repository}}:{{.Tag}}"{% endraw %} localhost/forem/forem:${SHOW_CONTAINER}|tail -1)
+
+          echo "The ${SHOW_CONTAINER} tag ${CONTAINER_ALIAS} is pointed at ${CONTAINER_BASE} (${CONTAINER_ID})"
+
+        }
+
+        rollback() {
+
+          if ! podman image exists localhost/forem/forem:rollback; then
+            echo "There is no Forem rollback container tag to rollback to! Exiting..."
+            exit 1
+          fi
+
+          if ! podman image exists localhost/forem/forem:current; then
+            echo "There is no Forem current container tag! Run foremimg to set one. Exiting..."
+            exit 1
+          fi
+
+          local CURRENT_TAG=$(podman images --format {% raw %}"{{.ID}}"{% endraw %} localhost/forem/forem:current|head -1)
+          local ROLLBACK_TAG=$(podman images --format {% raw %}"{{.ID}}"{% endraw %} localhost/forem/forem:rollback|head -1)
+
+          podman tag $ROLLBACK_TAG localhost/forem/forem:current
+          podman tag $CURRENT_TAG localhost/forem/forem:rollback
+
+          echo "Rolling back!!"
+          echo "rollback: $ROLLBACK_TAG => current"
+          echo "current: $CURRENT_TAG => rollback"
+          echo ""
+        }
+
+        update() {
+
+          if [[ -n "${1-}" ]] || [[ ! -f ${VERSION_FILE} ]]; then
+
+            local CONTAINER=${1:-"quay.io/forem/forem:latest"}
+
+            echo "Writing Forem container tag ${CONTAINER} to ${VERSION_FILE}"
+            echo ""
+
+            echo "CONTAINER=${CONTAINER}" > ${VERSION_FILE}
+            source "${VERSION_FILE}"
+
+          else
+
+            source "${VERSION_FILE}"
+            echo "Using Forem container tag (${CONTAINER}) from ${VERSION_FILE}"
+
+          fi
+
+          if [[ -z "$(skopeo inspect --format {% raw %}"{{.Digest}}"{% endraw %} docker://${CONTAINER} 2> /dev/null)" ]]; then
+
+            echo "The remote container ${CONTAINER} repository or tag does not exist. Please provide a valid container repository and tag."
+            echo "Example: foremimg quay.io/forem/forem:latest"
+            exit 0
+
+          fi
+
+          echo "Pulling ${CONTAINER}"
+          podman pull -q ${CONTAINER}
+          echo ""
+
+          if [[ $(podman images --format {% raw %}"{{.Digest}}"{% endraw %} ${CONTAINER}|head -1) != $(podman images --format {% raw %}"{{.Digest}}"{% endraw %} localhost/forem/forem:current|head -1) ]]; then
+
+            echo "The Forem container SHA256 has changed."
+            echo "${CONTAINER} ($(podman images --format {% raw %}"{{.ID}}"{% endraw %} ${CONTAINER}|head -1))"
+            echo "$(podman images --format {% raw %}"{{.Digest}}"{% endraw %} ${CONTAINER}|head -1)"
+            echo ""
+            echo "The current tag will be updated!"
+            echo ""
+
+            if podman image exists localhost/forem/forem:current; then
+              podman tag localhost/forem/forem:current localhost/forem/forem:rollback
+            fi
+
+            podman tag ${CONTAINER} localhost/forem/forem:current
+
+          else
+
+            echo "The Forem container SHA256 has not changed."
+            echo "${CONTAINER} ($(podman images --format {% raw %}"{{.ID}}"{% endraw %} ${CONTAINER}|head -1))"
+            echo "$(podman images --format {% raw %}"{{.Digest}}"{% endraw %} ${CONTAINER}|head -1)"
+            echo ""
+            echo "The current tag will not be updated!"
+            echo ""
+
+          fi
+
+        }
+
+        CASE_OPTION=${1:-}
+
+        case ${CASE_OPTION} in
+
+        rollback)
+          rollback
+          show current
+          ;;
+
+        show)
+          case "$2" in
+            current)
+              show current
+            ;;
+
+            rollback)
+              show rollback
+            ;;
+            *)
+             echo "Invalid tag! The supported tags are: 'current' and 'rollback'"
+            ;;
+          esac
+        ;;
+
+        help)
+          show_help
+          ;;
+
+        *)
+          update ${CASE_OPTION}
+          show current
+          ;;
+
+        esac
+
+  - path: /usr/local/bin/foremctl
+    mode: 0755
+    contents:
+      inline: |
+        #!/usr/bin/env bash
+
+        set -e
+
+        show_help() {
+          echo ""
+          echo "Usage: foremctl {console|deploy|help|rake|restart|start|stat|status|stop|update|version}"
+          echo ""
+          echo "console         Open a Rails console"
+          echo "deploy          Updates and deploy the most current version of Forem"
+          echo "help            Show this message"
+          echo "rake            Run a rake task"
+          echo "restart         Restart Forem"
+          echo "start           Start Forem"
+          echo "stats           Show CPU, RAM, Disk IO usage of the Forem containers"
+          echo "status          Show the current running Forem containers"
+          echo "stop            Stop Forem"
+          echo "update          Updates Forem to the lastest container"
+          echo "version         Shows information on the current running version of Forem"
+          exit 0
+        }
+
+        case $1 in
+
+              console)
+                echo "Launching Forem Console..."
+                sudo /usr/bin/podman exec --env RUBYOPT='-W0' -it forem-rails bundle exec rails c
+                ;;
+
+              deploy)
+                echo "Deploying Forem!"
+                echo ""
+                echo "Updating Forem container..."
+                sudo /usr/local/bin/foremimg
+                echo ""
+                echo "Restarting Forem service..."
+                sudo /usr/bin/systemctl restart forem.service
+                sudo /usr/bin/podman image prune -f
+                ;;
+
+              rake)
+                sudo /usr/bin/podman exec --env RUBYOPT=-W0 --env DD_TRACE_STARTUP_LOGS=false -it forem-rails bundle exec rake $2
+                ;;
+
+              status)
+                sudo /usr/bin/podman ps -a
+                ;;
+
+              stats)
+                sudo /usr/bin/podman stats
+                ;;
+
+              stop)
+                echo "Stopping Forem..."
+                sudo systemctl stop forem.service
+                ;;
+
+              start)
+                echo "Starting Forem..."
+                sudo systemctl start forem.service
+                ;;
+
+              restart)
+                echo "Restarting Forem..."
+                sudo systemctl restart forem.service
+                ;;
+
+              update)
+                echo "Updating Forem..."
+                sudo /usr/local/bin/foremimg
+              ;;
+
+              version)
+                sudo /usr/bin/podman images --format {% raw %}"Repository: {{.Repository}}:{{.Tag}} SHA256: {{.Id}} Created: {{.CreatedSince}}"{% endraw %} localhost/forem/forem:current|head -1
+              ;;
+
+              help)
+                show_help
+                ;;
+
+              *)
+                echo "Unknown command!"
+                show_help
+                exit 1
+                ;;
+
+        esac
+
+  - path: /etc/systemd/system.conf.d/accounting.conf
+    mode: 0644
+    contents:
+      inline: |
+        [Manager]
+        DefaultCPUAccounting=yes
+        DefaultMemoryAccounting=yes
+        DefaultBlockIOAccounting=yes
+
+  - path: /etc/sysctl.d/20-silence-audit.conf
+    mode: 0644
+    contents:
+      inline: |
+        # Raise console message logging level from DEBUG (7) to WARNING (4)
+        # so that audit messages don't get interspersed on the console that
+        # may frustrate a user trying to interactively log in.
+        kernel.printk=4
+
+  - path: /etc/sysctl.d/max-user-watches.conf
+    mode: 0644
+    contents:
+      inline: |
+        fs.inotify.max_user_watches=16184
+
+  - path: /etc/zincati/config.d/55-updates-strategy.toml
+    mode: 0644
+    contents:
+      inline: |
+        [updates]
+        strategy = "fleet_lock"
+        [updates.fleet_lock]
+        base_url = "https://updates.forem.com/"
+
+  - path: /etc/zincati/config.d/90-disable-auto-updates.toml
+    mode: 0644
+    contents:
+      inline: |
+        [updates]
+        enabled = false
+
+  - path: /etc/hostname
+    mode: 0644
+    overwrite: true
+    contents:
+      inline: |
+        {{ app_domain }}
+
+  - path: /root/.bash_profile
+    mode: 0644
+    overwrite: true
+    contents:
+      inline: |
+        # .bash_profile
+
+        # Get the aliases and functions
+        if [ -f ~/.bashrc ]; then
+                . ~/.bashrc
+        fi
+
+        # User specific environment and startup programs
+
+        PS1="[\u@\h ({{ app_domain }}) \W]\\$ "
+        alias vim="vi"
+
+  - path: /home/core/.bash_profile
+    mode: 0644
+    user:
+      name: core
+    group:
+      name: core
+    overwrite: true
+    contents:
+      inline: |
+        # .bash_profile
+
+        # Get the aliases and functions
+        if [ -f ~/.bashrc ]; then
+                . ~/.bashrc
+        fi
+
+        # User specific environment and startup programs
+
+        PS1="[\u@\h ({{ app_domain }}) \W]\\$ "
+        alias vim="vi"
+
+  - path: /opt/forem/envs/postgresql.env
+    mode: 0640
+    contents:
+      inline: |
+        POSTGRES_PASSWORD={{ postgres_password }}
+        POSTGRES_USER={{ postgres_user }}
+
+  - path: /opt/forem/envs/imgproxy.env
+    mode: 0640
+    contents:
+      inline: |
+        IMGPROXY_KEY={{ imgproxy_key }}
+        IMGPROXY_MAX_ANIMATION_FRAMES=500
+        IMGPROXY_SALT={{ imgproxy_salt }}
+
+  - path: /opt/forem/envs/redis.env
+    mode: 0640
+
+  - path: /opt/forem/envs/rails.env
+    mode: 0640
+    contents:
+      inline: |
+        ## Rails specific configs
+        APP_PROTOCOL={{ app_protocol }}
+        DATABASE_POOL_SIZE={{ database_pool_size }}
+        DATABASE_URL=postgresql://{{ postgres_user }}:{{ postgres_password }}@{{ postgres_host }}/forem_{{ rails_env }}
+        FORCE_SSL_IN_RAILS={{ force_ssl_in_rails }}
+        FOREM_CONTEXT={{ forem_context }}
+        LANG={{ lang }}
+        LOG_LEVEL=info
+        NODE_ENV={{ node_env }}
+        RACK_ENV={{ rack_env }}
+        RACK_TIMEOUT_SERVICE_TIMEOUT={{ rack_timeout_service_timeout }}
+        RACK_TIMEOUT_WAIT_TIMEOUT={{ rack_timeout_wait_timeout }}
+        RAILS_ENV={{ rails_env }}
+        RAILS_LOG_TO_STDOUT={{ rails_log_to_stdout }}
+        RAILS_SERVE_STATIC_FILES={{ rails_serve_static_files }}
+        REDIS_SESSIONS_URL={{ redis_sessions_url }}
+        REDIS_SIDEKIQ_URL={{ redis_sidekiq_url }}
+        REDIS_URL={{ redis_url }}
+        SESSION_EXPIRY_SECONDS={{ session_expiry_seconds }}
+        SESSION_KEY={{ session_key }}
+        WEB_CONCURRENCY={{ web_concurrency }}
+
+        ## Shared services across all Forems
+        DEFAULT_EMAIL={{ default_email }}
+        HONEYBADGER_API_KEY={{ honeybadger_api_key }}
+        HONEYBADGER_JS_API_KEY={{ honeybadger_js_api_key }}
+        HONEYCOMB_API_KEY={{ honeycomb_api_key }}
+        PUSHER_APP_ID={{ pusher_app_id }}
+        PUSHER_BEAMS_ID={{ pusher_beams_id }}
+        PUSHER_BEAMS_KEY={{ pusher_beams_key }}
+        PUSHER_CLUSTER={{ pusher_cluster }}
+        PUSHER_KEY={{ pusher_key }}
+        PUSHER_SECRET={{ pusher_secret }}
+        RECAPTCHA_SECRET={{ recaptcha_secret }}
+        RECAPTCHA_SITE={{ recaptcha_site }}
+        SENDGRID_API_KEY={{ sendgrid_api_key }}
+        SENDGRID_API_KEY_ID={{ sendgrid_api_key_id }}
+        SLACK_CHANNEL={{ slack_channel }}
+        SLACK_WEBHOOK_URL={{ slack_webhook_url }}
+
+        ## Forem specific configuration
+        APP_DOMAIN={{ app_domain }}
+        IMGPROXY_KEY={{ imgproxy_key }}
+        IMGPROXY_SALT={{ imgproxy_salt }}
+        SECRET_KEY_BASE={{ secret_key_base }}
+
+  - path: /opt/forem/configs/nginx.conf
+    mode: 0644
+    contents:
+      inline: |
+        user openresty;
+        worker_processes auto;
+        error_log /var/log/openresty/error.log;
+        pid /var/run/openresty/nginx.pid;
+
+        events {
+            worker_connections 1024;
+        }
+
+        http {
+            log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                              '$status $body_bytes_sent "$http_referer" '
+                              '"$http_user_agent" "$http_x_forwarded_for" "$uri" "$upstream_cache_status"';
+
+            access_log  /var/log/openresty/access.log  main;
+
+            sendfile            on;
+            tcp_nopush          on;
+            tcp_nodelay         on;
+            keepalive_timeout   65;
+            types_hash_max_size 4096;
+            server_tokens       off;
+
+            client_max_body_size 0;
+            large_client_header_buffers 4 32k;
+
+            include             mime.types;
+            default_type        application/octet-stream;
+
+            resolver 8.8.8.8;
+
+            upstream rails {
+              server localhost:3000;
+            }
+
+            upstream imgproxy {
+              server localhost:8080;
+            }
+
+            proxy_cache_path  /var/cache/openresty/images levels=1:2 keys_zone=images:10m max_size=20g inactive=30d;
+            proxy_temp_path   /var/cache/openresty/tmp;
+
+            server {
+              listen 9090 default deferred;
+              root /opt/apps/forem/public;
+
+            location /images/ {
+                  proxy_cache            images;
+                  proxy_cache_revalidate on;
+                  proxy_intercept_errors on;
+                  proxy_cache_use_stale  error timeout updating http_500 http_502 http_503 http_504;
+                  proxy_cache_lock       on;
+                  add_header             Cache-Control max-age=315576000;
+                  add_header             X-Cache-Status $upstream_cache_status;
+                  proxy_cache_valid      200 30d;
+                  proxy_pass             http://imgproxy/;
+                }
+
+              location ~ ^/(assets|packs)/ {
+                      gzip_static on;
+                      expires max;
+                      add_header Cache-Control public;
+                      try_files $uri @rails;
+              }
+
+              location / {
+                try_files $uri @rails;
+              }
+
+              location @rails {
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+                proxy_set_header Host $http_host;
+                proxy_redirect off;
+                proxy_pass http://rails;
+
+                if (-f $request_filename) {
+                  break;
+                }
+              }
+
+              error_page 500 502 503 504 /500.html;
+              location = /500.html {
+                root /opt/apps/forem/public;
+              }
+
+            }
+
+        }
+
+  - path: /opt/forem/configs/traefik/traefik.toml
+    mode: 0644
+    contents:
+      inline: |
+        [global]
+          checkNewVersion = true
+          sendAnonymousUsage = false
+
+        [log]
+          level = "DEBUG"
+
+        [entryPoints.web]
+          address = ":80"
+          [entryPoints.web.http]
+            [entryPoints.web.http.redirections]
+              [entryPoints.web.http.redirections.entryPoint]
+                to = "websecure"
+                scheme = "https"
+
+        [entryPoints.websecure]
+          address = ":443"
+
+        [certificatesResolvers.forem.acme]
+          email = "{{ default_email }}"
+          storage = "/etc/traefik/acme.json"
+          # caServer = "https://acme-staging-v02.api.letsencrypt.org/directory"
+          caServer = "https://acme-v02.api.letsencrypt.org/directory"
+          [certificatesResolvers.forem.acme.httpChallenge]
+            entryPoint = "web"
+
+        [providers]
+          [providers.file]
+            filename = "/etc/traefik/dynamic.toml"
+            watch = true
+
+  - path: /opt/forem/configs/traefik/dynamic.toml
+    mode: 0644
+    contents:
+      inline: |
+        [http.routers]
+          [http.routers.forem]
+            entrypoints= ["web", "websecure"]
+            rule = "Host(`{{ app_domain }}`) && Method(`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`)"
+            service = "forem"
+            middlewares = ["security"]
+            [http.routers.forem.tls]
+              certResolver = "forem"
+
+        [http.middlewares]
+          [http.middlewares.security.headers]
+            AccessControlAllowMethods = ["CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+            AccessControlAllowOrigin = "origin-list-or-null"
+            AccessControlMaxAge = 100
+            addVaryHeader = true
+            BrowserXssFilter = true
+            ContentTypeNosniff = true
+            CustomFrameOptionsValue = "SAMEORIGIN"
+            ForceSTSHeader = true
+            FrameDeny = true
+            ReferrerPolicy = "same-origin"
+            SSLRedirect = true
+            stsIncludeSubdomains = true
+            stsPreload = true
+            stsSeconds = 315360000
+            isDevelopment = false
+            [http.middlewares.security.headers.customRequestHeaders]
+                X-Forem-Origin = "traefik"
+            [http.middlewares.security.headers.customResponseHeaders]
+                Server = ""
+                X-Application-Context = ""
+                X-Powered-By = ""
+                exception = ""
+                Access-Control-Allow-Headers = ["CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+
+        [http.services]
+          [http.services.forem]
+            [http.services.forem.loadBalancer]
+              [[http.services.forem.loadBalancer.servers]]
+                url = "http://localhost:9090/"
+
+        [tls.options]
+          [tls.options.TLSOptions]
+            minVersion = "VersionTLS12"
+            sniStrict = true
+          [tls.options.default]
+            sniStrict = true
+            preferServerCipherSuites = true
+            cipherSuites = [
+              "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+              "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+              "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305",
+              "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+              "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+              "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
+              "TLS_FALLBACK_SCSV"
+            ]
+
+  - path: /opt/forem/configs/traefik/acme.json
+    mode: 0600
+
+  - path: /etc/systemd/zram-generator.conf
+    mode: 0644
+    contents:
+      inline: |
+        # This config file enables a /dev/zram0 device with the default settings
+        [zram0]
+
+systemd:
+  units:
+  - name: docker.service
+    mask: true
+    enabled: false
+
+  - name: docker.socket
+    mask: true
+    enabled: false
+
+  - name: podman.socket
+    mask: false
+    enabled: true
+
+  - name: docker-to-podman-sock.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Create a docker.sock symlink pointing to podman.sock
+      After=podman.service
+      ConditionPathExists=!/var/run/docker.sock
+
+      [Service]
+      Type=oneshot
+      ExecStart=-/usr/bin/bash -c "ln -s /var/run/podman/podman.sock /var/run/docker.sock"
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - name: fcos-python-3.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=FCOS Python 3 service
+      Wants=network.target
+      After=network-online.target
+
+      [Service]
+      ExecStart=/usr/local/bin/fcos_python enable
+      ExecStop=/usr/local/bin/fcos_python disable
+
+      Type=oneshot
+      RemainAfterExit=true
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: forem-container.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem container service
+      Wants=network.target
+      After=network-online.target
+      Before=forem-pod.service forem.service
+
+      [Service]
+      ExecStart=/usr/local/bin/foremimg
+
+      Type=oneshot
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: forem-pod.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem pod service
+      Wants=network.target
+      After=network-online.target forem-container.service
+      Wants=forem-postgresql.service forem-redis.service forem.service forem-traefik.service
+      Before=forem-postgresql.service forem-redis.service forem-openresty.service forem.service
+
+      [Service]
+      LimitNOFILE=1048576
+      Environment=PODMAN_SYSTEMD_UNIT=%n
+      Restart=on-failure
+      ExecStartPre=-/usr/bin/podman pod create \
+        --infra-conmon-pidfile %T/%N.pid \
+        --name %N \
+        -p 443:443 -p 80:80
+      ExecStart=/usr/bin/podman pod start %N
+      ExecStop=/usr/bin/podman pod stop -t 10 %N
+      ExecStopPost=/usr/bin/podman pod stop -t 10 %N
+      ExecStopPost=/usr/bin/podman pod rm %N
+      PIDFile=%T/%N.pid
+      KillMode=none
+      Type=forking
+      SyslogIdentifier=%N
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: forem-imgproxy.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem Imgproxy Service
+      Wants=network.target
+      After=network-online.target
+      BindsTo=forem-pod.service
+      After=forem-pod.service
+      Before=forem.service
+
+      [Service]
+      LimitNOFILE=1048576
+      Environment=PODMAN_SYSTEMD_UNIT=%n
+      EnvironmentFile=/etc/forem/services/versions
+      Restart=on-failure
+      ExecStartPre=-/usr/bin/podman pull $IMGPROXY_CONTAINER_IMAGE
+      ExecStart=/usr/bin/podman run \
+        --name %N \
+        --pod forem-pod \
+        --log-driver journald \
+        --replace --rm -d \
+        --sdnotify conmon \
+        --env-file /opt/forem/envs/imgproxy.env \
+        $IMGPROXY_CONTAINER_IMAGE
+      ExecStop=/usr/bin/podman stop -t 10 %N
+      ExecStopPost=/usr/bin/podman stop -i -t 10 %N
+      ExecStopPost=/usr/bin/podman rm -i -v %N
+      Type=notify
+      NotifyAccess=all
+      Delegate=true
+      SyslogIdentifier=%N
+      Slice=machine-forem-pod.slice
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: forem-postgresql.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem Postgresql Service
+      Wants=network.target
+      After=network-online.target
+      BindsTo=forem-pod.service
+      After=forem-pod.service
+      Before=forem.service
+
+      [Service]
+      LimitNOFILE=1048576
+      Environment=PODMAN_SYSTEMD_UNIT=%n
+      EnvironmentFile=/etc/forem/services/versions
+      Restart=on-failure
+      ExecStartPre=-/usr/bin/podman pull $POSTGRES_CONTAINER_IMAGE
+      ExecStart=/usr/bin/podman run \
+        --name %N \
+        --pod forem-pod \
+        --log-driver journald \
+        --replace --rm -d \
+        --sdnotify conmon \
+        --env-file /opt/forem/envs/postgresql.env \
+        --volume /opt/forem/data/postgresql:/var/lib/postgresql/data:Z \
+        $POSTGRES_CONTAINER_IMAGE
+      ExecStop=/usr/bin/podman stop -t 10 %N
+      ExecStopPost=/usr/bin/podman stop -i -t 10 %N
+      ExecStopPost=/usr/bin/podman rm -i -v %N
+      Type=notify
+      NotifyAccess=all
+      Delegate=true
+      SyslogIdentifier=%N
+      Slice=machine-forem-pod.slice
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: forem-redis.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem Redis Service
+      Wants=network.target
+      After=network-online.target
+      BindsTo=forem-pod.service
+      After=forem-pod.service
+      Before=forem.service
+
+      [Service]
+      LimitNOFILE=1048576
+      Environment=PODMAN_SYSTEMD_UNIT=%n
+      EnvironmentFile=/etc/forem/services/versions
+      Restart=on-failure
+      ExecStartPre=-/usr/bin/podman pull $REDIS_CONTAINER_IMAGE
+      ExecStartPre=-/usr/bin/podman volume create %N
+      ExecStart=/usr/bin/podman run \
+        --name %N \
+        --pod forem-pod \
+        --log-driver journald \
+        --replace --rm -d \
+        --sdnotify conmon \
+        --env-file /opt/forem/envs/redis.env \
+        --volume /opt/forem/data/redis:/data:Z \
+        $REDIS_CONTAINER_IMAGE redis-server --appendonly yes
+      ExecStop=/usr/bin/podman stop -t 10 %N
+      ExecStopPost=/usr/bin/podman stop -i -t 10 %N
+      ExecStopPost=/usr/bin/podman rm -i -v %N
+      Type=notify
+      NotifyAccess=all
+      Delegate=true
+      SyslogIdentifier=%N
+      Slice=machine-forem-pod.slice
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: forem.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem Service
+      Wants=network.target
+      After=network-online.target
+      Wants=forem-rails.service forem-worker.service forem-openresty.service
+      BindsTo=forem-pod.service
+      After=forem-pod.service forem-postgresql.service forem-redis.service forem-imgproxy.service
+
+      [Service]
+      SyslogIdentifier=%N
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStartPre=/usr/bin/systemctl is-active forem-pod.service
+      ExecStartPre=/usr/bin/systemctl is-active forem-postgresql.service
+      ExecStartPre=/usr/bin/systemctl is-active forem-imgproxy.service
+      ExecStartPre=/usr/bin/systemctl is-active forem-redis.service
+      ExecStartPre=/usr/bin/podman image exists localhost/forem/forem:current
+      ExecStart=/usr/bin/true
+      Restart=on-failure
+      RestartSec=30
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - name: forem-rails.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem Rails Service
+      Wants=network.target
+      After=network-online.target
+      Wants=forem-openresty.service
+      BindsTo=forem-pod.service forem.service
+      After=forem-pod.service forem.service forem-postgresql.service forem-redis.service forem-container.service
+      Before=forem-openresty.service
+
+      [Service]
+      LimitNOFILE=1048576
+      Environment=PODMAN_SYSTEMD_UNIT=%n
+      Restart=on-failure
+      RestartSec=30
+      TimeoutStartSec=600
+      ExecStartPre=/usr/bin/podman image exists localhost/forem/forem:current
+      ExecStartPre=/usr/bin/podman run \
+        --name forem-rails-bootstrap \
+        --pod forem-pod \
+        --log-driver journald \
+        --replace --rm \
+        --sdnotify ignore \
+        --env-file /opt/forem/envs/rails.env \
+        --volume /opt/forem/data/uploads:/opt/apps/forem/public/uploads:U,z \
+        localhost/forem/forem:current bootstrap
+      ExecStart=/usr/bin/podman run \
+        --name %N \
+        --pod forem-pod \
+        --log-driver journald \
+        --replace --rm -d \
+        --sdnotify conmon \
+        --env-file /opt/forem/envs/rails.env \
+        --volume /opt/forem/data/uploads:/opt/apps/forem/public/uploads:z \
+        localhost/forem/forem:current
+      ExecStop=/usr/bin/podman stop -t 10 %N
+      ExecStopPost=/usr/bin/podman stop -i -t 10 %N
+      ExecStopPost=/usr/bin/podman rm -i -v %N
+      Type=notify
+      NotifyAccess=all
+      Delegate=true
+      SyslogIdentifier=%N
+      Slice=machine-forem-pod.slice
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: forem-worker.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem Worker Service
+      Wants=network.target
+      After=network-online.target
+      BindsTo=forem-pod.service forem.service
+      After=forem-pod.service forem.service forem-rails.service forem-postgresql.service forem-redis.service forem-container.service
+
+      [Service]
+      LimitNOFILE=1048576
+      Environment=PODMAN_SYSTEMD_UNIT=%n
+      Restart=on-failure
+      RestartSec=30
+      ExecStartPre=/usr/bin/podman image exists localhost/forem/forem:current
+      ExecStart=/usr/bin/podman run \
+        --name %N \
+        --pod forem-pod \
+        --log-driver journald \
+        --replace --rm -d \
+        --sdnotify conmon \
+        --env-file /opt/forem/envs/rails.env \
+        --volume /opt/forem/data/uploads:/opt/apps/forem/public/uploads:U,z \
+        localhost/forem/forem:current bundle exec sidekiq -c 2
+      ExecStop=/usr/bin/podman stop -t 30 %N
+      ExecStopPost=/usr/bin/podman stop -i -t 30 %N
+      ExecStopPost=/usr/bin/podman rm -i -v %N
+      Type=notify
+
+      NotifyAccess=all
+      Delegate=true
+      SyslogIdentifier=%N
+      Slice=machine-forem-pod.slice
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: forem-openresty.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem OpenResty Service
+      Wants=network.target
+      After=network-online.target
+      BindsTo=forem-pod.service forem-rails.service
+      After=forem-pod.service forem.service forem-rails.service
+
+      [Service]
+      LimitNOFILE=1048576
+      Environment=PODMAN_SYSTEMD_UNIT=%n
+      EnvironmentFile=/etc/forem/services/versions
+      Restart=on-failure
+      RestartSec=30
+      ExecStartPre=-/usr/bin/podman pull $OPENRESTY_CONTAINER_IMAGE
+      ExecStartPre=-/usr/bin/podman volume create %N-cache
+      ExecStart=/usr/bin/podman run \
+        --name %N \
+        --pod forem-pod \
+        --log-driver journald \
+        --replace --rm -d \
+        --sdnotify conmon \
+        --volumes-from forem-rails:rw \
+        --volume %N-cache:/var/cache/openresty/:Z \
+        --volume /opt/forem/configs/nginx.conf:/etc/openresty/nginx.conf:Z \
+        $OPENRESTY_CONTAINER_IMAGE
+      ExecStop=/usr/bin/podman stop -t 10 %N
+      ExecStopPost=/usr/bin/podman stop -i -t 10 %N
+      ExecStopPost=/usr/bin/podman rm -i -v %N
+      Type=notify
+      NotifyAccess=all
+      Delegate=true
+      SyslogIdentifier=%N
+      Slice=machine-forem-pod.slice
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: forem-traefik.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Forem Traefik Service
+      Wants=network.target
+      After=network-online.target
+      BindsTo=forem-pod.service
+      After=forem-pod.service forem.service forem-rails.service forem-openresty.service
+
+      [Service]
+      LimitNOFILE=1048576
+      Environment=PODMAN_SYSTEMD_UNIT=%n
+      EnvironmentFile=/etc/forem/services/versions
+      Restart=on-failure
+      ExecStartPre=-/usr/bin/podman pull $TRAEFIK_CONTAINER_IMAGE
+      ExecStart=/usr/bin/podman run \
+        --name %N \
+        --pod forem-pod \
+        --log-driver journald \
+        --replace --rm -d \
+        --sdnotify conmon \
+        --volume /opt/forem/configs/traefik/:/etc/traefik/:Z \
+        $TRAEFIK_CONTAINER_IMAGE
+      ExecStartPost=/usr/bin/chmod 0600 /opt/forem/configs/traefik/acme.json
+      ExecStop=/usr/bin/podman stop -t 10 %N
+      ExecStopPost=/usr/bin/podman stop -i -t 10 %N
+      ExecStopPost=/usr/bin/podman rm -i -v %N
+      Type=notify
+      NotifyAccess=all
+      Delegate=true
+      SyslogIdentifier=%N
+      Slice=machine-forem-pod.slice
+
+      [Install]
+      WantedBy=multi-user.target default.target
+
+  - name: rpm-ostree-install.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Layer rpms
+      # We run after `systemd-machine-id-commit.service` to ensure that
+      # `ConditionFirstBoot=true` services won't rerun on the next boot.
+      After=systemd-machine-id-commit.service
+      After=network-online.target
+      ConditionPathExists=!/var/lib/rpm-ostree-install.stamp
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/usr/bin/rpm-ostree install --allow-inactive systemd-oomd-defaults
+      ExecStart=/bin/touch /var/lib/rpm-ostree-install.stamp
+      ExecStart=/bin/systemctl --no-block reboot
+
+      [Install]
+      WantedBy=multi-user.target

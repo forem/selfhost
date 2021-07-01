@@ -1,0 +1,31 @@
+---
+- name: Get FCOS releases
+  ansible.builtin.uri:
+    url: "{{ fcos_build_url }}"
+    return_content: yes
+  changed_when: no
+  register: fcos_releases
+
+- name: Set FCOS file download facts
+  ansible.builtin.set_fact:
+    fcos_download_basename: "{{ fcos_releases.json | json_query(fcos_json_location) | basename }}"
+    fcos_download_location: "{{ fcos_releases.json | json_query(fcos_json_location) }}"
+    fcos_download_release: "{{ fcos_releases.json | json_query(fcos_json_release) }}"
+    fcos_download_sha256: "{{ fcos_releases.json | json_query(fcos_json_sha256) }}"
+    fcos_download_signature: "{{ fcos_releases.json | json_query(fcos_json_signature) }}"
+    fcos_download_stream: "{{ fcos_stream }}"
+    fcos_download_uncompressed_sha256: "{{ fcos_releases.json | json_query(fcos_json_uncompressed_sha256) | default('') }}"
+    fcos_aws_image: "{{ fcos_releases.json | json_query(fcos_json_aws_image) }}"
+    fcos_gcp_project: "{{ fcos_releases.json | json_query(fcos_json_gcp_project) }}"
+    fcos_gcp_family: "{{ fcos_releases.json | json_query(fcos_json_gcp_family) }}"
+    fcos_gcp_name: "{{ fcos_releases.json | json_query(fcos_json_gcp_name) }}"
+  vars:
+    fcos_json_location: "architectures.{{ fcos_arch }}.artifacts.{{ fcos_platform }}.formats.\"{{ fcos_format }}\".disk.location"
+    fcos_json_release: "architectures.{{ fcos_arch }}.artifacts.{{ fcos_platform }}.release"
+    fcos_json_sha256: "architectures.{{ fcos_arch }}.artifacts.{{ fcos_platform }}.formats.\"{{ fcos_format }}\".disk.sha256"
+    fcos_json_signature: "architectures.{{ fcos_arch }}.artifacts.{{ fcos_platform }}.formats.\"{{ fcos_format }}\".disk.signature"
+    fcos_json_uncompressed_sha256: "architectures.{{ fcos_arch }}.artifacts.{{ fcos_platform }}.formats.\"{{ fcos_format }}\".disk.\"uncompressed-sha256\""
+    fcos_json_aws_image: "architectures.{{ fcos_arch }}.images.aws.regions.\"{{ fcos_aws_region}}\".image"
+    fcos_json_gcp_project: "architectures.{{ fcos_arch }}.images.gcp.project"
+    fcos_json_gcp_family: "architectures.{{ fcos_arch }}.images.gcp.family"
+    fcos_json_gcp_name: "architectures.{{ fcos_arch }}.images.gcp.name"

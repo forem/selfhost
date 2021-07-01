@@ -1,0 +1,88 @@
+---
+all:
+  hosts:
+  vars:
+    ssh_key: "{{ lookup('file', '~/.ssh/forem.pub') }}"
+    app_protocol: https://
+    database_pool_size: 10
+    elasticsearch_url: http://localhost:9200
+    force_ssl_in_rails: "true"
+    lang: en_US.UTF-8
+    node_env: "{{ forem_environment }}"
+    rack_env: "{{ forem_environment }}"
+    rack_timeout_service_timeout: 300
+    rack_timeout_wait_timeout: 300
+    rails_env: "{{ forem_environment }}"
+    rails_log_to_stdout: "true"
+    rails_serve_static_files: enabled
+    redis_sessions_url: redis://localhost:6379
+    redis_sidekiq_url: redis://localhost:6379
+    redis_url: redis://localhost:6379
+    session_expiry_seconds: 1209600
+    web_concurrency: 2
+    forem_context: selfhost
+  children:
+    qemu:
+      hosts:
+        forem:
+          ansible_connection: local
+          ansible_python_interpreter: /usr/bin/python3
+          forem_domain_name: forem.wtf
+          forem_subdomain_name: example
+          forem_server_hostname: example
+          default_email: replaceme@example.org
+          app_domain: "{{ forem_subdomain_name }}.{{ forem_domain_name }}"
+          secret_key_base: "{{ vault_secret_key_base }}"
+          session_key: _FOREMSELFHOST_Session
+          imgproxy_key: "{{ vault_imgproxy_key }}"
+          imgproxy_salt: "{{ vault_imgproxy_salt }}"
+          forem_version: latest
+          forem_environment: production
+          dd_api_key: "{{ vault_dd_api_key }}"
+          honeybadger_api_key: "{{ vault_honeybadger_api_key }}"
+          honeybadger_js_api_key: "{{ vault_honeybadger_js_api_key }}"
+          honeycomb_api_key: "{{ vault_honeycomb_api_key }}"
+          postgres_user: forem_production
+          postgres_password: "{{ vault_forem_postgres_password }}"
+          postgres_host: localhost
+          pusher_app_id: "{{ vault_pusher_app_id }}"
+          pusher_beams_id: "{{ vault_pusher_beams_id }}"
+          pusher_beams_key: "{{ vault_pusher_beams_key }}"
+          pusher_cluster: us2
+          pusher_key: "{{ vault_pusher_key }}"
+          pusher_secret: "{{ vault_pusher_secret }}"
+          recaptcha_secret: "{{ vault_recaptcha_secret }}"
+          recaptcha_site: "{{ vault_recaptcha_site }}"
+          sendgrid_api_key: "{{ vault_sendgrid_api_key }}"
+          sendgrid_api_key_id: "{{ vault_sendgrid_api_key_id }}"
+          slack_channel: "#forem-activity"
+          slack_webhook_url: "{{ vault_slack_webhook_url }}"
+
+          # Required Ansible Vault variables
+          # echo -n $(pwgen -1 128)|ansible-vault encrypt_string --stdin-name vault_secret_key_base
+          vault_secret_key_base:
+          # echo -n $(xxd -g 2 -l 64 -p /dev/random | tr -d '\n') |  ansible-vault encrypt_string --stdin-name vault_imgproxy_key
+          vault_imgproxy_key:
+          # echo -n $(xxd -g 2 -l 64 -p /dev/random | tr -d '\n') |  ansible-vault encrypt_string --stdin-name vault_imgproxy_salt
+          vault_imgproxy_salt:
+          # echo -n $(pwgen -1 128)|ansible-vault encrypt_string --stdin-name vault_forem_postgres_password
+          vault_forem_postgres_password:
+
+          # Optional Ansible Vault variables
+          # echo -n foobarbaz |  ansible-vault encrypt_string --stdin-name vault_my_cool_vaulted_var
+          vault_cloudinary_api_key:
+          vault_cloudinary_api_secret:
+          vault_dd_api_key:
+          vault_honeybadger_api_key:
+          vault_honeybadger_js_api_key:
+          vault_honeycomb_api_key:
+          vault_pusher_app_id:
+          vault_pusher_beams_id:
+          vault_pusher_beams_key:
+          vault_pusher_key:
+          vault_pusher_secret:
+          vault_recaptcha_secret:
+          vault_recaptcha_site:
+          vault_sendgrid_api_key:
+          vault_sendgrid_api_key_id:
+          vault_slack_webhook_url:

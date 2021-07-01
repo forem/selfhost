@@ -1,0 +1,109 @@
+---
+# tasks file for butane
+
+- name: Check for butane
+  ansible.builtin.shell: "which butane"
+  register: butane_check
+  ignore_errors: true
+
+- name: Fail if butane is not installed
+  ansible.builtin.fail:
+    msg: "Butane is not installed or not in your $PATH! You need to install it first. See: https://coreos.github.io/butane/getting-started/"
+  when: butane_check.rc != 0
+
+- name: Create temporary butane file
+  ansible.builtin.tempfile:
+    state: file
+    prefix: butane_input_
+    suffix: .bu
+  register: butane_temp_input_file
+
+- name: Copy Butane YAML into temporary file
+  ansible.builtin.copy:
+    content: "{{ lookup('template', '{{ butane_input_template }}') }}"
+    dest:    "{{ butane_temp_input_file.path }}"
+
+- name: Transpile Butane YAML into JSON
+  ansible.builtin.shell: |
+    butane  --strict "{{ butane_temp_input_file.path }}"
+  args:
+    executable: /bin/bash
+  register: butane_transpiled_ignition_json
+
+- name: Create temporary Butane Ignition JSON file
+  ansible.builtin.tempfile:
+    state: file
+    prefix: butane_input_
+    suffix: .ign
+  register: butane_temp_ignition_file
+
+- name: Copy Butane input JSON into temporary Butane Ignition file
+  ansible.builtin.copy:
+    content: "{{ butane_transpiled_ignition_json.stdout }}"
+    dest:    "{{ butane_temp_ignition_file.path }}"
+
+- name: Gzip ignition data
+  ansible.builtin.shell: |
+    gzip -c "{{ butane_temp_ignition_file.path }}"
+  register: butane_ignition_compressed_b64encoded_data
+
+- name: Register butane_ignition facts
+  ansible.builtin.set_fact:
+    butane_ignition_file: "{{ butane_temp_ignition_file.path }}"
+    butane_ignition_stdout: "{{ butane_transpiled_ignition_json.stdout }}"
+    butane_ignition_json: "{{ butane_transpiled_ignition_json.stdout | to_json }}"
+    butane_ignition_b64encoded_json: "{{ butane_transpiled_ignition_json.stdout | from_json | to_json | b64encode}}"
+    butane_ignition_compressed_b64encoded_json: "{{ butane_ignition_compressed_b64encoded_data.stdout | string | b64encode }}"
+
+- name: Create temporary boot Butane file
+  ansible.builtin.tempfile:
+    state: file
+    prefix: butane_boot_
+    suffix: .bu
+  register: butane_boot_temp_file
+
+- name: Copy boot Butane YAML into boot Butane file
+  ansible.builtin.copy:
+    content: "{{ lookup('template', 'boot.yml.j2') }}"
+    dest:    "{{ butane_boot_temp_file.path }}"
+
+- name: Transpile Butane into Ignition
+  ansible.builtin.shell: |
+    butane  --strict "{{ butane_boot_temp_file.path }}"
+  args:
+    executable: /bin/bash
+  register: butane_transpiled_boot_ignition_json
+
+- name: Create temporary boot Ignition file
+  ansible.builtin.tempfile:
+    state: file
+    prefix: butane_boot_
+    suffix: .ign
+  register: butane_boot_ignition_file
+
+- name: Copy Butane boot JSON into temporary Butane Ignition file
+  ansible.builtin.copy:
+    content: "{{ butane_transpiled_boot_ignition_json.stdout }}"
+    dest:    "{{ butane_boot_ignition_file.path }}"
+
+- name: Gzip ignition data
+  ansible.builtin.shell: |
+    gzip -c "{{ butane_temp_ignition_file.path }}"
+  register: butane_boot_ignition_compressed_b64encoded_data
+
+- name: Register butane_boot_ignition facts
+  ansible.builtin.set_fact:
+    butane_boot_ignition_file: "{{ butane_temp_ignition_file.path }}"
+    butane_boot_ignition_stdout: "{{ butane_transpiled_boot_ignition_json.stdout }}"
+    butane_boot_ignition_json: "{{ butane_transpiled_boot_ignition_json.stdout | to_json }}"
+    butane_boot_ignition_b64encoded_json: "{{ butane_transpiled_boot_ignition_json.stdout | from_json | to_json | b64encode }}"
+    butane_boot_ignition_compressed_b64encoded_json: "{{ butane_boot_ignition_compressed_b64encoded_data.stdout | string | b64encode }}"
+
+- name:
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ butane_temp_input_file.path }}"
+    - "{{ butane_temp_ignition_file.path }}"
+  when: butane_cleanup

@@ -1,0 +1,15 @@
+variant: fcos
+version: 1.3.0
+ignition:
+  config:
+    replace:
+{% if butane_compress %}
+      source: data:;base64,{{ butane_ignition_compressed_b64encoded_json }}
+      compression: gzip
+{% elif butane_b64encode %}
+      source: data:;base64,{{ butane_ignition_b64encoded_json }}
+{% elif butane_aws_s3 %}
+      source: {{ butane_aws_s3_url }}
+{% else %}
+      inline: {{ butane_ignition_json | to_json | string }}
+{% endif %}

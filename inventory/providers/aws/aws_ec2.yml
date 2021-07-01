@@ -1,0 +1,9 @@
+plugin: amazon.aws.aws_ec2
+boto_profile: forem-selfhost
+keyed_groups:
+  - prefix: tag
+    key: tags
+filters:
+  tag:App: forem
+compose:
+  ansible_host: public_ip_address

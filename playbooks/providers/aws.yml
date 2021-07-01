@@ -1,0 +1,223 @@
+---
+- name: Deploy Forem to AWS
+  hosts: all
+  become: false
+
+  collections:
+    - amazon.aws
+    - community.aws
+    - community.general
+
+  vars:
+    fcos_arch: x86_64
+    fcos_platform: aws
+    fcos_format: vmdk.xz
+    fcos_stream: stable
+    fcos_aws_region: us-east-1
+    fcos_aws_size: t3a.small
+    fcos_aws_ebs_size: 100
+    fcos_aws_profile: forem-selfhost
+    butane_cleanup: true
+    ssh_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+  roles:
+    - preflight
+
+  tasks:
+  - name: Get FCOS facts
+    include_role:
+      name: fcos
+      tasks_from: facts
+
+  - name: Convert butane file to an Ignition file
+    include_role:
+      name: butane
+      tasks_from: butane
+    vars:
+      butane_input_template: "../templates/forem.yml.j2"
+      butane_aws_s3: true
+      butane_aws_s3_url: "https://forem-selfhost-{{ app_domain |replace('.', '-') }}-ign.s3.{{ fcos_aws_region }}.amazonaws.com/forem.ign"
+
+  - amazon.aws.ec2_vpc_net_info:
+      filters:
+        "isDefault": "true"
+      region: "{{ fcos_aws_region }}"
+      profile: "{{ fcos_aws_profile }}"
+    register: forem_vpc_info
+
+  - name: Set forem_vpc_id fact
+    ansible.builtin.set_fact:
+      forem_vpc_id: "{{ forem_vpc_info['vpcs'][0]['vpc_id'] }}"
+
+  - name: Gather info about VPC subnets
+    amazon.aws.ec2_vpc_subnet_info:
+      filters:
+        vpc-id: "{{ forem_vpc_id }}"
+        availability-zone: "{{ fcos_aws_region }}a"
+      region: "{{ fcos_aws_region }}"
+      profile: "{{ fcos_aws_profile }}"
+    register: forem_subnet_info
+
+  - name: Gather info about VPC AZs
+    amazon.aws.aws_az_info:
+      region: "{{ fcos_aws_region }}"
+      profile: "{{ fcos_aws_profile }}"
+    register: forem_az_info
+
+  - name: "Get route table facts for {{ forem_vpc_id }}"
+    community.aws.ec2_vpc_route_table_info:
+      region: "{{ fcos_aws_region }}"
+      filters:
+        vpc-id: "{{ forem_vpc_id }}"
+      profile: "{{ fcos_aws_profile }}"
+    register: forem_vpc_route_table
+
+  - name: "Generate list of route tables for {{ forem_vpc_id }}"
+    set_fact:
+      forem_vpcd_route_table_ids: "{{ forem_vpc_route_table.route_tables|map(attribute='id')|list }}"
+
+  - name: "Create S3 VPC endpoint in {{ forem_vpc_id }}"
+    community.aws.ec2_vpc_endpoint:
+      state: present
+      region: "{{ fcos_aws_region }}"
+      vpc_id: "{{ forem_vpc_id }}"
+      service: "com.amazonaws.{{ fcos_aws_region }}.s3"
+      route_table_ids: "{{ forem_vpcd_route_table_ids }}"
+      profile: "{{ fcos_aws_profile }}"
+    register: forem_vpc_s3_endpoint
+
+  - name: Set forem_vpc_s3_endpoint_id fact
+    set_fact:
+      forem_vpc_s3_endpoint_id: "{{ forem_vpc_s3_endpoint.result.vpc_endpoint_id }}"
+
+  - name: Wait for S3 VPC Endpoint
+    pause:
+      seconds: 30
+
+  - name: Create FCOS ignition bucket
+    amazon.aws.s3_bucket:
+      name: "forem-selfhost-{{ app_domain |replace('.', '-') }}-ign"
+      state: present
+      encryption: "AES256"
+      region: "{{ fcos_aws_region }}"
+      profile: "{{ fcos_aws_profile }}"
+      policy: |
+        {
+          "Version": "2012-10-17",
+          "Id": "VPCEaccesstoignitionbucket",
+          "Statement": [
+            {
+              "Sid": "VPCE-access-to-ign-bucket",
+              "Principal": "*",
+              "Action": "s3:GetObject",
+              "Effect": "Allow",
+              "Resource": ["arn:aws:s3:::forem-selfhost-{{ app_domain |replace(".", "-") }}-ign/*"],
+              "Condition": {
+                "StringEquals": {
+                  "aws:sourceVpce": "{{ forem_vpc_s3_endpoint_id }}"
+                }
+              }
+            }
+          ]
+        }
+
+  - name: "Upload butane_ignition_stdout to forem-selfhost-{{ app_domain |replace('.', '-') }}-ign"
+    amazon.aws.aws_s3:
+      bucket: "forem-selfhost-{{ app_domain |replace('.', '-') }}-ign"
+      object: "/forem.ign"
+      content: "{{ butane_ignition_stdout | to_json | string }}"
+      mode: put
+      region: "{{ fcos_aws_region }}"
+      profile: "{{ fcos_aws_profile }}"
+    register: forem_ign_s3
+
+  - name: Create Forem SSH key
+    amazon.aws.ec2_key:
+      name: "forem-{{ app_domain }}"
+      key_material: "{{ ssh_key }}"
+      profile: "{{ fcos_aws_profile }}"
+      region: "{{ fcos_aws_region }}"
+
+  - name: "Create Forem security group for {{ app_domain }}"
+    amazon.aws.ec2_group:
+      name: "forem-{{ app_domain }}"
+      description: "Forem security group for {{ app_domain }}"
+      vpc_id: "{{ forem_vpc_id }}"
+      region: "{{ fcos_aws_region }}"
+      profile: "{{ fcos_aws_profile }}"
+      tags:
+        "Name": "forem-{{ app_domain }}"
+      rules:
+        - proto: tcp
+          ports:
+            - 22
+          cidr_ip: "{{ local_wan_ip_address }}/32"
+          rule_desc: "Allow SSH access from {{ local_wan_ip_address }}"
+        - proto: tcp
+          ports:
+            - 80
+            - 443
+          rule_desc: "Allow HTTP and HTTPS access from 0.0.0.0/0"
+          cidr_ip: 0.0.0.0/0
+      rules_egress:
+        - proto: "all"
+          from_port: 0
+          to_port: 65535
+          cidr_ip: "0.0.0.0/0"
+          rule_desc: "Allow outbound access to 0.0.0.0/0"
+    register: forem_security_group
+
+  - name: "Launch Forem instance for {{ app_domain }}"
+    amazon.aws.ec2:
+      key_name: "forem-{{ app_domain }}"
+      region: "{{ fcos_aws_region }}"
+      profile: "{{ fcos_aws_profile }}"
+      group: "forem-{{ app_domain }}"
+      instance_type: "{{ fcos_aws_size }}"
+      image: "{{ fcos_aws_image }}"
+      wait: yes
+      wait_timeout: 500
+      vpc_subnet_id: "{{ forem_subnet_info.subnets | map(attribute='id') | list | first }}"
+      volumes:
+        - device_name: /dev/xvda
+          volume_type: gp2
+          volume_size: "{{ fcos_aws_ebs_size }}"
+          encrypted: yes
+          delete_on_termination: no
+      monitoring: yes
+      assign_public_ip: yes
+      user_data: "{{ butane_boot_ignition_stdout | to_json | string }}"
+      instance_tags:
+        App: "forem"
+        Domain: "{{ app_domain }}"
+        Name: "forem-{{ app_domain }}"
+      count_tag:
+        App: "forem"
+        Domain: "{{ app_domain }}"
+        Name: "forem-{{ app_domain }}"
+      exact_count: 1
+    register: forem_ec2_instance
+
+  - name: Wait 300 seconds for port 22 to become open
+    wait_for:
+      port: 22
+      host: "{{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
+      delay: 10
+    connection: local
+
+  - name: "Delete object forem-selfhost-{{ app_domain |replace('.', '-') }}-ign/forem.ign from S3"
+    amazon.aws.aws_s3:
+      bucket: "forem-selfhost-{{ app_domain |replace('.', '-') }}-ign"
+      object: "/forem.ign"
+      mode: delobj
+      region: "{{ fcos_aws_region }}"
+      profile: "{{ fcos_aws_profile }}"
+
+  - name: Output EC2 setup message
+    ansible.builtin.debug:
+      msg:
+      - "The public IPv4 IP Address for {{ app_domain }} is {{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
+      - "Please add an A entry for {{ app_domain }} that points to {{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
+      - "Example:"
+      - "    {{ app_domain }} IN A {{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
+      - "Once you have DNS resolving to this EC2 instance please read the Forem Admin Docs: https://forem-admin.netlify.app/"

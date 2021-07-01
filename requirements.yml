@@ -1,0 +1,6 @@
+---
+collections:
+  - name: community.digitalocean
+    version: 1.0.0
+  - name: amazon.aws
+  - name: community.aws

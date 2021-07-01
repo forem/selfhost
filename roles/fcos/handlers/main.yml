@@ -1,0 +1,7 @@
+---
+# handlers file for fcos
+
+- name: Clean up temporary FCOS download directory
+  file:
+    path: "{{ fcos_tmp_download_dir.path }}"
+    state: absent

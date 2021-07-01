@@ -1,0 +1,9 @@
+---
+# defaults file for butane
+
+butane_aws_s3: false
+butane_aws_s3_url:
+butane_b64encode: false
+butane_cleanup: true
+butane_compress: false
+butane_input_template: boot.yml.j2

@@ -1,0 +1,11 @@
+plugin: gcp_compute
+projects:
+ - forem-selfhost # Replace this with your GCP project name
+filters:
+  - 'name = forem*'
+hostnames: ['public_ip', 'name']
+keyed_groups:
+  - prefix: label
+    key: labels
+service_account_file: ~/.gcp/forem.json
+auth_kind: serviceaccount

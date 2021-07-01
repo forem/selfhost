@@ -1,0 +1,59 @@
+---
+- name: Check for FCOS file download
+  ansible.builtin.stat:
+    path: "{{ fcos_storage_location }}/{{ fcos_download_basename }}"
+  register: fcos_storage_location_file_stat
+
+- name: Download FCOS
+  block:
+
+  - name: Check if fcos_storage_location exists
+    ansible.builtin.stat:
+      path: "{{ fcos_storage_location }}"
+    register: fcos_storage_location_stat
+
+  - name: Fail if fcos_storage_location does not exist
+    ansible.builtin.fail:
+      msg: "{{ fcos_storage_location }} does not exist! Please create it or update fcos_storage_location"
+    when: not fcos_storage_location_stat.stat.exists
+
+  - name: Create temporary FCOS download directory
+    ansible.builtin.tempfile:
+      state: directory
+      prefix: fcos_download_
+    register: fcos_tmp_download_dir
+
+  - name: Download FCOS files
+    ansible.builtin.get_url:
+      url: "{{ item.url }}"
+      dest: "{{ fcos_tmp_download_dir.path }}/{{ item.filename }}"
+    loop:
+      - { url: "{{ fcos_download_location }}", filename: "{{ fcos_download_location | basename }}" }
+      - { url: "{{ fcos_download_signature }}", filename: "{{ fcos_download_signature | basename }}" }
+      - { url: "{{ fcos_gpg_key_location }}", filename: "{{ fcos_gpg_key_location | basename }}" }
+    register: fcos_file_downloads
+
+  - name: Get sha256 of FCOS download file
+    ansible.builtin.stat:
+      path: "{{ fcos_tmp_download_dir.path }}/{{ fcos_download_location | basename }}"
+      checksum_algorithm: sha256
+      get_checksum: yes
+    register: fcos_download_file_sha256_sum
+
+  - name: Import Fedora GPG key
+    ansible.builtin.command: "gpg --import {{ fcos_tmp_download_dir.path }}/{{ fcos_gpg_key_location | basename }}"
+
+  - name: Verify FCOS file download via GPG
+    ansible.builtin.command: "gpg --verify {{ fcos_tmp_download_dir.path }}/{{ fcos_download_signature | basename }} {{ fcos_tmp_download_dir.path }}/{{ fcos_download_location | basename }}"
+
+  - name: Verify sha256sum of FCOS download
+    ansible.builtin.fail:
+      msg: "The SHA256 sum of {{ fcos_tmp_download_dir.path }}/{{ fcos_download_location | basename }} does not match {{ fcos_json_sha256 }}"
+    when: fcos_download_file_sha256_sum.stat.checksum != fcos_download_sha256
+
+  - name: Move FCOS file download to fcos_storage_location
+    ansible.builtin.command: "mv {{ fcos_tmp_download_dir.path }}/{{ fcos_download_location | basename }} {{ fcos_storage_location }}/{{ fcos_download_basename }}"
+    notify:
+      - Clean up temporary FCOS download directory
+
+  when: not fcos_storage_location_file_stat.stat.exists

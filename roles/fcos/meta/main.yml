@@ -1,0 +1,17 @@
+galaxy_info:
+  author: Forem Systems Engineering
+  description: Gathers info about and downloads Fedora CoreOS streams
+  company: Forem
+
+  issue_tracker_url: https://github.com/selfhost/issues
+
+  license: AGPL-3.0-only
+
+  min_ansible_version: 4.0.0
+
+  galaxy_tags:
+    - fedora
+    - fcos
+    - "Fedora CoreOS"
+
+dependencies: []

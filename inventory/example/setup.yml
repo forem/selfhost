@@ -1,0 +1,151 @@
+---
+all:
+  hosts:
+  vars:
+    ssh_key: "{{ lookup('file', '~/.ssh/forem.pub') }}"
+    app_protocol: https://
+    database_pool_size: 10
+    elasticsearch_url: http://localhost:9200
+    force_ssl_in_rails: "true"
+    lang: en_US.UTF-8
+    node_env: "{{ forem_environment }}"
+    rack_env: "{{ forem_environment }}"
+    rack_timeout_service_timeout: 300
+    rack_timeout_wait_timeout: 300
+    rails_env: "{{ forem_environment }}"
+    rails_log_to_stdout: "true"
+    rails_serve_static_files: enabled
+    redis_sessions_url: redis://localhost:6379
+    redis_sidekiq_url: redis://localhost:6379
+    redis_url: redis://localhost:6379
+    session_expiry_seconds: 1209600
+    web_concurrency: 2
+    forem_context: selfhost
+    forem_container_tag: quay.io/forem/forem:latest
+  children:
+    forems:
+      hosts:
+        forem:
+          ansible_connection: local
+          ansible_python_interpreter: /usr/bin/python3
+          # CHANGE_REQUIRED — forem_domain_name: example.com
+          forem_domain_name: REPLACEME
+          # CHANGE_REQUIRED — default_email: your_email@example.com
+          default_email: REPLACEME
+          forem_subdomain_name: www # can be subdomain, i.e. "community" in community.mainwebsite.com
+          forem_server_hostname: host # You may change to something else if you choose (i.e. server, srv, etc)
+          app_domain: "{{ forem_subdomain_name }}.{{ forem_domain_name }}"
+          secret_key_base: "{{ vault_secret_key_base }}"
+          session_key: _FOREMSELFHOST_Session
+          imgproxy_key: "{{ vault_imgproxy_key }}"
+          imgproxy_salt: "{{ vault_imgproxy_salt }}"
+          forem_version: latest
+          forem_environment: production
+          dd_api_key: "{{ vault_dd_api_key }}"
+          honeybadger_api_key: "{{ vault_honeybadger_api_key }}"
+          honeybadger_js_api_key: "{{ vault_honeybadger_js_api_key }}"
+          honeycomb_api_key: "{{ vault_honeycomb_api_key }}"
+          postgres_user: forem_production
+          postgres_password: "{{ vault_forem_postgres_password }}"
+          postgres_host: localhost
+          pusher_app_id: "{{ vault_pusher_app_id }}"
+          pusher_beams_id: "{{ vault_pusher_beams_id }}"
+          pusher_beams_key: "{{ vault_pusher_beams_key }}"
+          pusher_cluster: us2
+          pusher_key: "{{ vault_pusher_key }}"
+          pusher_secret: "{{ vault_pusher_secret }}"
+          recaptcha_secret: "{{ vault_recaptcha_secret }}"
+          recaptcha_site: "{{ vault_recaptcha_site }}"
+          sendgrid_api_key: "{{ vault_sendgrid_api_key }}"
+          sendgrid_api_key_id: "{{ vault_sendgrid_api_key_id }}"
+          slack_channel: "#forem-activity"
+          slack_webhook_url: "{{ vault_slack_webhook_url }}"
+
+          # Required Ansible Vault secret variables
+          # Use the following example commands below in a terminal to generate the required variables with Ansible Vault encrypt_string
+          # See this URL to learn more about ansible-vault:
+          # https://docs.ansible.com/ansible/latest/user_guide/vault.html#encrypting-individual-variables-with-ansible-vault
+
+          # echo -n $(pwgen -1 128)|ansible-vault encrypt_string --stdin-name vault_secret_key_base
+          # This is an example of an encrypted vault_secret_key_base variable looks like
+          # vault_secret_key_base: !vault |
+          #   $ANSIBLE_VAULT;1.1;AES256
+          #   31626639326433353437623836636431303161363438396661636130646434396430633032343264
+          #   3433343031316634636133636663666130303330636366350a616333366666656633353136363865
+          #   32333739623836623362343862623963333834656236333433333665666531373534316238633039
+          #   3136396237363839350a633764313365343033623061316364646135356336373062313433383866
+          #   62613738336463366639323230626465353630646161323931396333333764633633303532656632
+          #   33653839363465313863303533613062666364363563353264613439306539366665383462663234
+          #   62313161333566373962396561376166333766366233396533356539393738623666656635373436
+          #   36323064393461393836626537366239363433393261383137366664343734663161323162613634
+          #   35353863356462326435656435373261386230356631396464653937643463323536656538313036
+          #   346661356161386132643837386161376337
+          vault_secret_key_base: REPLACEME
+
+          # echo -n $(xxd -g 2 -l 64 -p /dev/random | tr -d '\n') |  ansible-vault encrypt_string --stdin-name vault_imgproxy_key
+          # This is an example of an encrypted vault_imgproxy_key variable looks like
+          # vault_imgproxy_key: !vault |
+          #   $ANSIBLE_VAULT;1.1;AES256
+          #   35646264656466303662316162353030343266366562633733623133326663656430356138306266
+          #   6564343661366430383637633433343364363538316633340a336436653162363032646430333861
+          #   33643061636336613361373430396332663964333230626661336637623336666366623839323564
+          #   6432363731363339360a383361323863343131323837636633643261383034316534663634613835
+          #   32316565343937306536343232313530383935386231333830343339653838303533383037616333
+          #   33613732366236653466373233366234646437353166326164313764626439393165333861653538
+          #   61343135373966303931656633363331313838653039626264396136623438626261356632356463
+          #   64643666613930383938373337363238373032323166333730653734353463656139623838313939
+          #   34626539626339353263376231623731656362636666636435366531346232363836613739386464
+          #   303435353334366338646161333636643062
+          vault_imgproxy_key: REPLACEME
+
+          # echo -n $(xxd -g 2 -l 64 -p /dev/random | tr -d '\n') |  ansible-vault encrypt_string --stdin-name vault_imgproxy_salt
+          # This is an example of an encrypted vault_imgproxy_salt variable looks like
+          # vault_imgproxy_salt: !vault |
+          #   $ANSIBLE_VAULT;1.1;AES256
+          #   32353437333561633733306239333164363165386437313632373761663535373661633261343833
+          #   3534303539333235643530613530323964373530353437330a656636626432336633636132616430
+          #   62316331396436626662303134343964366635316435653264386437653238643964363935643637
+          #   3433623566346265640a343539303166333439626136343336643232643930393261313035313933
+          #   36353833376139306266623261623561373235633432333462323230623665633562333565323235
+          #   36366338646134633738323661656530663261336430633235643938383236353832626138356434
+          #   30663337353235303038336239343934383065613532343137313038643330346436306261666130
+          #   34323137633531393665343564613131343431373835336436656239313738303033333065623964
+          #   30643262313833396234623937616632623561656664393739663266313531366332623434336565
+          #   316634303133623165643138643831373630
+          vault_imgproxy_salt: REPLACEME
+
+          # echo -n $(pwgen -1 128)|ansible-vault encrypt_string --stdin-name vault_forem_postgres_password
+          # This is an example of an encrypted vault_forem_postgres_password variable looks like
+          # vault_forem_postgres_password: !vault |
+          #   $ANSIBLE_VAULT;1.1;AES256
+          #   32316238646635623832303464343262313831326131376662653037633265316166653439346163
+          #   6231366436316431303164323634663137663866303036390a323736346236633835613962613634
+          #   64616233353663643832636435396461393962616264623866613031633931396464346238646564
+          #   3030336139303735640a646133313066383535643763353938663865363361356463623162366234
+          #   37656661613334376361353331343437636633646331366466646130383731613939616639313638
+          #   66613131333735383763656335393762346464346234626633313138376439633965363030616337
+          #   65643663306266623764643732376535336339383334363131636537376531613738653764343865
+          #   39316264633764383264396530393532333639643062333838373531626263623965366462633534
+          #   33343834346333393737353432303065386433303065336563393634393065303838313162653035
+          #   32306565616362346466643366356463656639333162343030323338656532613132303164373134
+          #   343463383266383361303634356133326431
+          vault_forem_postgres_password: REPLACEME
+
+          # Optional Ansible Vault variables
+          # echo -n foobarbaz |  ansible-vault encrypt_string --stdin-name vault_my_cool_vaulted_var
+          vault_cloudinary_api_key:
+          vault_cloudinary_api_secret:
+          vault_dd_api_key:
+          vault_honeybadger_api_key:
+          vault_honeybadger_js_api_key:
+          vault_honeycomb_api_key:
+          vault_pusher_app_id:
+          vault_pusher_beams_id:
+          vault_pusher_beams_key:
+          vault_pusher_key:
+          vault_pusher_secret:
+          vault_recaptcha_secret:
+          vault_recaptcha_site:
+          vault_sendgrid_api_key:
+          vault_sendgrid_api_key_id:
+          vault_slack_webhook_url:

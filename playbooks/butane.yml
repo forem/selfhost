@@ -1,0 +1,14 @@
+---
+- name: Generate Ignition file
+  hosts: all
+  become: false
+  gather_facts: false
+  serial: 1
+
+  tasks:
+  - name: Convert butane file to an Ignition file
+    include_role:
+      name: butane
+      tasks_from: butane
+    vars:
+      butane_input_template: "forem.yml.j2"

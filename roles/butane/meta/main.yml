@@ -1,0 +1,18 @@
+galaxy_info:
+  author: Forem Systems Engineering
+  description: Converts Butane files into Ignition files
+  company: Forem
+
+  issue_tracker_url: https://github.com/selfhost/issues
+
+  license: AGPL-3.0-only
+
+  min_ansible_version: 4.0.0
+
+  galaxy_tags:
+    - fedora
+    - fcos
+    - ignition
+    - butane
+
+dependencies: []

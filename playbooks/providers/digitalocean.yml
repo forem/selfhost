@@ -1,0 +1,250 @@
+---
+- name: Deploy Forem to DigitalOcean
+  hosts: all
+  become: false
+
+  collections:
+    - community.general
+    - community.digitalocean
+
+  vars:
+    fcos_arch: x86_64
+    fcos_platform: digitalocean
+    fcos_format: qcow2.gz
+    fcos_stream: stable
+    forem_do_region: nyc3
+    forem_do_size: s-2vcpu-2gb
+    butane_cleanup: true
+
+  pre_tasks:
+  - name: Check for doctl
+    shell: "which doctl"
+    register: doctl_check
+    ignore_errors: true
+
+  - name: Fail if doctl is not installed
+    fail:
+      msg: "Hey, doctl is not installed! You need to install it first. See: https://github.com/digitalocean/doctl/releases/"
+    when: doctl_check.rc != 0
+
+  - name: Check doctl account get
+    shell: "doctl account get"
+    register: doctl_account_check
+    ignore_errors: true
+
+  - name: Fail if doctl account get fails
+    fail:
+      msg: "Hey, doctl account get failed! Check to ensure you have authenticated with DigitalOcean. See: https://github.com/digitalocean/doctl#authenticating-with-digitalocean"
+    when: doctl_account_check.rc != 0
+
+  - name: Include vars from doctl/config.yaml into the 'doctl_check' variable"
+    include_vars:
+      file: "{{ lookup('first_found', params) }}"
+      name: doctl_config
+    vars:
+      params:
+        files:
+        - "{{ lookup('env','HOME') }}/.config/doctl/config.yaml"
+        - "{{ lookup('env','HOME') }}/Library/Application Support/doctl/config.yaml"
+
+  - name: Set doctl facts
+    ansible.builtin.set_fact:
+      forem_doctl_access_token: "{{ doctl_config | json_query(forem_doctl_access_token_query) }}"
+    vars:
+      forem_doctl_access_token_query: "\"access-token\""
+
+  roles:
+  - preflight
+
+  tasks:
+  - name: Get FCOS facts
+    include_role:
+      name: fcos
+      tasks_from: facts
+
+  - name: Gather information about all images
+    community.digitalocean.digital_ocean_image_info:
+      image_type: private
+      oauth_token: "{{ forem_doctl_access_token }}"
+    register: fcos_do_image_check
+
+  - name: Create FCOS image
+    shell: "doctl compute image create fcos-{{ fcos_download_release }} --image-distribution 'Fedora CoreOS' --image-description 'Fedora CoreOS {{ fcos_download_release }}' --region {{ forem_do_region }} --image-url {{ fcos_download_location }}"
+    when: fcos_do_image_check.data|selectattr("name", "contains", fcos_download_release)|list|length == 0
+
+  - name: Skip doctl compute image create step if image already exists
+    debug:
+      msg: "An image named fcos-{{ fcos_download_release }} already exists. Skipping doctl compute image create step!"
+    when: not fcos_do_image_check.data|selectattr("name", "contains", fcos_download_release)|list|length == 0
+
+  - name: "Wait for fcos-{{ fcos_download_release }} to be created"
+    community.digitalocean.digital_ocean_image_info:
+      image_type: private
+      oauth_token: "{{ forem_doctl_access_token }}"
+    register: fcos_do_image_info
+    until: not fcos_do_image_info.data|selectattr("name", "contains", fcos_download_release)|list|length == 0
+    retries: 20
+    delay: 30
+
+  - name: Set FCOS DO Image ID fact
+    ansible.builtin.set_fact:
+      fcos_do_image_id: "{{ fcos_do_image_info| community.general.json_query(fcos_do_image_id_query)|first}}"
+    vars:
+      fcos_do_image_id_query: "data[?name=='fcos-{{ fcos_download_release }}'].id"
+
+  - name: Convert butane file to an Ignition file
+    include_role:
+      name: butane
+      tasks_from: butane
+    vars:
+      butane_input_template: "../templates/forem.yml.j2"
+
+  - name: Ensure forem_fcos_ssh_key is present
+    community.digitalocean.digital_ocean_sshkey:
+      name: forem_fcos_ssh_key
+      ssh_pub_key: "{{ ssh_key }}"
+      state: present
+      oauth_token: "{{ forem_doctl_access_token }}"
+    register: forem_fcos_ssh_key
+
+  - name: "Create new Forem for {{ app_domain }}"
+    community.digitalocean.digital_ocean_droplet:
+      state: present
+      name: "{{ app_domain }}"
+      size_id: "{{ forem_do_size }}"
+      region_id: "{{ forem_do_region }}"
+      image: "{{ fcos_do_image_id }}"
+      wait_timeout: 500
+      user_data: "{{ butane_ignition_stdout | to_json | string }}"
+      oauth_token: "{{ forem_doctl_access_token }}"
+      ssh_keys:
+        - "{{ forem_fcos_ssh_key.data.ssh_key.id }}"
+      unique_name: yes
+    register: forem_fcos_droplet_info
+
+  - name: Tag a resource; creating the tag if it does not exist
+    community.digitalocean.digital_ocean_tag:
+      name: forem
+      resource_id: "{{ forem_fcos_droplet_info.data.droplet.id }}"
+      state: present
+      oauth_token: "{{ forem_doctl_access_token }}"
+
+  - name: "Create a firewall for {{ forem_domain_name }}"
+    uri:
+      method: POST
+      url: "https://api.digitalocean.com/v2/firewalls"
+      headers:
+        authorization: "Bearer {{ forem_doctl_access_token }}"
+      body: '{{ create_firewall | to_json }}'
+      body_format: json
+      return_content: yes
+      status_code: 201,202,409
+    vars:
+      create_firewall:
+        name: "{{ app_domain }}-firewall"
+        inbound_rules:
+        - protocol: tcp
+          ports: "80"
+          sources:
+            addresses:
+            - 0.0.0.0/0
+            - "::/0"
+        - protocol: tcp
+          ports: "443"
+          sources:
+            addresses:
+            - 0.0.0.0/0
+            - "::/0"
+        - protocol: tcp
+          ports: "22"
+          sources:
+            addresses:
+            - "{{ local_wan_ip_address }}/32"
+            - "162.84.185.67/32"
+        outbound_rules:
+        - protocol: tcp
+          ports: all
+          destinations:
+            addresses:
+            - 0.0.0.0/0
+            - "::/0"
+        - protocol: udp
+          ports: all
+          destinations:
+            addresses:
+            - 0.0.0.0/0
+            - "::/0"
+        droplet_ids:
+        - "{{ forem_fcos_droplet_info.data.droplet.id }}"
+
+  - name: "Get DNS zone info for {{ forem_domain_name }}"
+    uri:
+      url: "https://api.digitalocean.com/v2/domains/{{ forem_domain_name }}"
+      headers:
+        accept: application/json
+        authorization: "Bearer {{ forem_doctl_access_token }}"
+      return_content: yes
+      status_code: 200,404
+    register: dns_zone_response
+
+  - name: "Create DNS zone for {{ forem_domain_name }}"
+    uri:
+      method: POST
+      url: "https://api.digitalocean.com/v2/domains"
+      headers:
+        authorization: "Bearer {{ forem_doctl_access_token }}"
+      body: '{{ create_zone | to_json }}'
+      body_format: json
+      return_content: yes
+      status_code: 201
+    vars:
+      create_zone:
+          name: "{{ forem_domain_name }}"
+    when: forem_domain_name not in dns_zone_response.json.domain.name|default() or dns_zone_response.json.id|default() == "not_found"
+
+  - name: "Get DNS zone records for {{ forem_domain_name }}"
+    uri:
+      url: "https://api.digitalocean.com/v2/domains/{{ forem_domain_name }}/records"
+      headers:
+        accept: application/json
+        authorization: "Bearer {{ forem_doctl_access_token }}"
+      return_content: yes
+    register: dns_record_response
+
+  - name: "Create A records on {{ forem_domain_name }}"
+    uri:
+      method: POST
+      url: "https://api.digitalocean.com/v2/domains/{{ forem_domain_name }}/records"
+      headers:
+        authorization: "Bearer {{ forem_doctl_access_token }}"
+      body: '{{ create_record | to_json }}'
+      body_format: json
+      return_content: yes
+      status_code: 201
+    vars:
+      create_record:
+          data: "{{ forem_fcos_droplet_info.data.ip_address }}"
+          flags: null
+          name: "{{ item }}"
+          port: null
+          priority: null
+          tag: null
+          ttl: 1800
+          type: A
+          weight: null
+    loop:
+      - "{{ forem_server_hostname }}"
+      - "{{ forem_subdomain_name }}"
+    when: item not in (dns_record_response.json.domain_records | map(attribute="name") | list)
+
+  - name: Output droplet setup message
+    ansible.builtin.debug:
+      msg:
+        - "The public IPv4 IP Address for {{ app_domain }} is {{ forem_fcos_droplet_info.data.ip_address }}"
+        - "Please add an A entry for {{ app_domain }} that points to {{ forem_fcos_droplet_info.data.ip_address }}"
+        - "Example:"
+        - "    {{ app_domain }} IN A {{ forem_fcos_droplet_info.data.ip_address }}"
+        - "Or use these DNS nameservers: {{ dns_record_response.json | community.general.json_query(forem_domain_nameserver_query)| list }} for {{ forem_domain_name }}"
+        - "Once you have DNS resolving to this DigitalOcean instance please read the Forem Admin Docs: https://forem-admin.netlify.app/"
+    vars:
+      forem_domain_nameserver_query: "domain_records[?type=='NS'].data"

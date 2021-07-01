@@ -1,0 +1,24 @@
+plugin: community.digitalocean.digitalocean
+attributes:
+  - id
+  - name
+  - memory
+  - vcpus
+  - disk
+  - size
+  - image
+  - networks
+  - volume_ids
+  - tags
+  - region
+keyed_groups:
+  - key: do_region.slug
+    prefix: 'region'
+    separator: '_'
+  - key: do_tags | lower
+    prefix: ''
+    separator: ''
+compose:
+  ansible_host: do_networks.v4 | selectattr('type','eq','public') | map(attribute='ip_address') | first
+  class: do_size.description | lower
+  distro: do_image.distribution | lower

@@ -1,0 +1,7 @@
+[label_app_forem]
+
+[forem:children]
+label_app_forem
+
+[forem:vars]
+ansible_python_interpreter=/usr/local/bin/python

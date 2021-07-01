@@ -1,0 +1,28 @@
+---
+- name: Build Forem on QEMU
+  hosts: all
+  become: false
+  gather_facts: false
+
+  vars:
+    fcos_stream: stable
+    butane_cleanup: false
+
+  roles:
+    - preflight
+    - fcos
+
+  tasks:
+  - name: Convert butane file to an Ignition file
+    include_role:
+      name: butane
+      tasks_from: butane
+    vars:
+      butane_input_template: "../templates/forem.yml.j2"
+
+  - name: Create QEMU Fedora CoreOS VM
+    shell: |
+      qemu-kvm -m 2048 -cpu host -snapshot -daemonize \
+      -drive if=virtio,file={{ fcos_extraction_location }}/{{ fcos_download_basename | splitext | first }} \
+      -fw_cfg name=opt/com.coreos/config,file={{ butane_ignition_file }} \
+      -nic user,model=virtio,hostfwd=tcp::2222-:22,hostfwd=tcp::9090-:9090
