@@ -6,7 +6,7 @@ We currently support three cloud providers: [DigitalOcean](https://www.digitaloc
 
 For those that want to DIY, you can use the systemd units in the [Butane template](https://github.com/forem/selfhost-devel/blob/main/playbooks/templates/forem.yml.j2) as an example of how to run Forem without Fedora CoreOS on a Linux distribution that supports systemd.
 
-The goal of this project is to provide you with the choice, freedom, and cost-effectiveness to host your own Forem community as you see fit. 
+The goal of this project is to provide you with the choice, freedom, and cost-effectiveness to host your own Forem community as you see fit.
 
 We can't wait to see the community you selfhost with Forem!
 
@@ -70,7 +70,7 @@ _Note: Following this quick start guide with the cloud provider of your choice w
 ----
 ### AWS
 
-The AWS provisioning target has a few preset variables that can be either edited in the playbook or passed along as Ansible [extra vars](https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#defining-variables-at-runtime) on the CLI.  
+The AWS provisioning target has a few preset variables that can be either edited in the playbook or passed along as Ansible [extra vars](https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#defining-variables-at-runtime) on the CLI.
 
 ```
 fcos_aws_region: us-east-1
@@ -112,7 +112,7 @@ forem_do_size: s-2vcpu-2gb
 1) Install the [DigitalOcean Ansible collection](https://github.com/ansible-collections/community.digitalocean) `ansible-galaxy collection install community.digitalocean` or install it via `ansible-galaxy collection install -r requirements.yml`
 2) [Download and install](https://docs.digitalocean.com/reference/doctl/how-to/install/) `doctl`
 3) [Create DigitalOcean Auth Token](https://docs.digitalocean.com/reference/api/create-personal-access-token/)
-4) Run `doctl auth init` and pass the API token created from step 3 and verify that you can authenticate to the DigitalOcean API with `doctl account get`
+4) Run [`doctl auth init`](https://docs.digitalocean.com/reference/doctl/reference/auth/init/) and pass the API token created from step 3 and verify that you can authenticate to the DigitalOcean API with `doctl account get`. If you used a context here, you'll need to also `doctl auth switch`.
 
 #### Provision
 1) Run the DigitalOcean provider playbook to set up your Forem
