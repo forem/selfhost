@@ -112,7 +112,7 @@ forem_do_size: s-2vcpu-2gb
 1) Install the [DigitalOcean Ansible collection](https://github.com/ansible-collections/community.digitalocean) `ansible-galaxy collection install community.digitalocean` or install it via `ansible-galaxy collection install -r requirements.yml`
 2) [Download and install](https://docs.digitalocean.com/reference/doctl/how-to/install/) `doctl`
 3) [Create DigitalOcean Auth Token](https://docs.digitalocean.com/reference/api/create-personal-access-token/)
-4) Run `doctl auth init` and pass the API token created from step 3 and verify that you can authenticate to the DigitalOcean API with `doctl account get`
+4) Run `doctl auth init --access-token APITOKEN` and pass the API token created from step 3 and verify that you can authenticate to the DigitalOcean API with `doctl account get`
 
 #### Provision
 1) Run the DigitalOcean provider playbook to set up your Forem
