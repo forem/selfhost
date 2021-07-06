@@ -1,6 +1,6 @@
 plugin: gcp_compute
 projects:
- - forem-selfhost # Replace this with your GCP project name
+ - forem-selfhost-12345 # Replace this with your GCP project ID
 filters:
   - 'name = forem*'
 hostnames: ['public_ip', 'name']

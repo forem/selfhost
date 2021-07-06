@@ -130,13 +130,13 @@ forem_gcp_region: us-central1
 forem_gcp_zone: a
 forem_gcp_machine_type: e2-small
 forem_gcp_disk_size: 100
-forem_gcp_project: forem-selfhost
+forem_gcp_project_id: forem-selfhost-12345
 ```
 
 - `forem_gcp_region` + `forem_gcp_zone`: the Google Cloud region and zone that is used to setup your Forem server. The default region is `us-central1` in zone `a` which is in Council Bluffs, Iowa, USA
 - `forem_gcp_machine_type`: the GCP machine type. A recommended type is `e2-small`, with 2 shared CPUs and 2GB of RAM
 - `forem_gcp_disk_size`: the amount of disk space (in GB)
-- `forem_gcp_project`: your GCP project name
+- `forem_gcp_project_id`: your GCP project ID
 
 #### Setup
 1) Install the Google Cloud collection `ansible-galaxy collection install google.cloud` or install it via `ansible-galaxy collection install -r requirements.yml`
