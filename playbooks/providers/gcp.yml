@@ -15,7 +15,7 @@
     forem_gcp_zone: a
     forem_gcp_machine_type: e2-small
     forem_gcp_disk_size: 100
-    forem_gcp_project: forem-selfhost
+    forem_gcp_project_id: forem-selfhost-12345
     forem_gcp_cred_kind: serviceaccount
     forem_gcp_cred_file: "~/.gcp/forem.json"
     butane_cleanup: true
@@ -42,7 +42,7 @@
       size_gb: "{{ forem_gcp_disk_size }}"
       source_image: "projects/fedora-coreos-cloud/global/images/family/fedora-coreos-{{ fcos_stream }}"
       zone: "{{forem_gcp_region }}-{{ forem_gcp_zone }}"
-      project: "{{ forem_gcp_project }}"
+      project: "{{ forem_gcp_project_id }}"
       auth_kind: "{{ forem_gcp_cred_kind }}"
       service_account_file: "{{ forem_gcp_cred_file }}"
       state: present
@@ -57,7 +57,7 @@
         - '22'
       source_ranges:
         - "{{ local_wan_ip_address }}/32"
-      project: "{{ forem_gcp_project }}"
+      project: "{{ forem_gcp_project_id }}"
       auth_kind: "{{ forem_gcp_cred_kind }}"
       service_account_file: "{{ forem_gcp_cred_file }}"
       state: present
@@ -72,7 +72,7 @@
         - '443'
       source_ranges:
         - "0.0.0.0/0"
-      project: "{{ forem_gcp_project }}"
+      project: "{{ forem_gcp_project_id }}"
       auth_kind: "{{ forem_gcp_cred_kind }}"
       service_account_file: "{{ forem_gcp_cred_file }}"
       state: present
@@ -81,7 +81,7 @@
     gcp_compute_address:
       name: "forem-{{ app_domain |replace('.', '-') }}"
       region: "{{ forem_gcp_region }}"
-      project: "{{ forem_gcp_project }}"
+      project: "{{ forem_gcp_project_id }}"
       auth_kind: "{{ forem_gcp_cred_kind }}"
       service_account_file: "{{ forem_gcp_cred_file }}"
       state: present
@@ -108,7 +108,7 @@
       labels:
         app: forem
       zone: "{{forem_gcp_region }}-{{ forem_gcp_zone }}"
-      project: "{{ forem_gcp_project }}"
+      project: "{{ forem_gcp_project_id }}"
       auth_kind: "{{ forem_gcp_cred_kind }}"
       service_account_file: "{{ forem_gcp_cred_file }}"
       metadata:
