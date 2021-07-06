@@ -87,7 +87,7 @@ ssh_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
 #### Setup
 1) Install the [Ansible Amazon AWS collections](https://github.com/ansible-collections/amazon.aws) `ansible-galaxy collection install amazon.aws community.aws` or install them via `ansible-galaxy collection install -r requirements.yml`
 2) Download and install the [AWS CLI version 2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) tool
-3) Install `boto`, `boto3`, and `botocore` pip modules `pip3 install boto boto3 botocore` or run `pip install -r requirements.txt`
+3) Install `boto`, `boto3`, and `botocore` pip3 modules `pip3 install boto boto3 botocore` or run `pip3 install -r requirements.txt`
 4) [Create an AWS IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html#id_users_create_console) with Programmatic access called `forem-selfhost` with the following `AmazonEC2FullAccess`, `AmazonS3FullAccess`, `AmazonVPCFullAccess` AWS managed policies attached. Be sure to save the Access key ID and Secret access key to use in step 5.
 5) Run `aws configure --profile forem-selfhost` and input the access key ID and secret key when prompted. We use `us-east-1` for default region name but you can choose a different one if you wish. Set default output format to `json`
 
@@ -140,7 +140,7 @@ forem_gcp_project: forem-selfhost
 
 #### Setup
 1) Install the Google Cloud collection `ansible-galaxy collection install google.cloud` or install it via `ansible-galaxy collection install -r requirements.yml`
-2) Install `requests` and `google-auth` pip modules `pip install requests google-auth` or run `pip3 install -r requirements.txt`
+2) Install `requests` and `google-auth` pip3 modules `pip3 install requests google-auth` or run `pip3 install -r requirements.txt`
 3) Create a [Google Cloud Service Account](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount) called `forem-selfhost` with Compute Instance Admin (v1) privileges and [download a JSON credentials file](https://support.google.com/cloud/answer/6158849?hl=en&ref_topic=6262490#serviceaccounts) and place it in `~/.gcp/forem.json`
 
 #### Provision
