@@ -27,7 +27,7 @@ all:
       hosts:
         forem:
           ansible_connection: local
-          ansible_python_interpreter: /usr/bin/python3
+          ansible_python_interpreter: /usr/bin/python3 # on macOS, this may need to be /usr/local/bin/python3
           # CHANGE_REQUIRED — forem_domain_name: example.com
           forem_domain_name: REPLACEME
           # CHANGE_REQUIRED — default_email: your_email@example.com
