@@ -1,4 +1,4 @@
-# Selfhost Forem
+# Forem Self-Host
 
 This is a repo for setting up a single install of [Forem](https://github.com/forem/forem). It uses [Fedora CoreOS](https://getfedora.org/en/coreos) as the host operating system and containers powered by [Podman](https://podman.io/) with [systemd](https://systemd.io/). We use [Ansible](https://github.com/ansible/ansible) to define your Forem in code and [Butane](https://coreos.github.io/butane/) / [Ignition](https://coreos.github.io/ignition/) to provision the system on boot. The Ignition configuration provided by this repo is a derivative of what we use for our Forem Cloud service.
 
@@ -150,7 +150,7 @@ forem_gcp_project_id: forem-selfhost-12345
 ----
 ## Ansible Dynamic Inventories
 
-We provide some example [Dynamic Inventories](https://docs.ansible.com/ansible/latest/user_guide/intro_dynamic_inventory.html) for you to use on your selfhosted Forem. You can use them to run [Ansible Adhoc Commands](https://docs.ansible.com/ansible/latest/user_guide/intro_adhoc.html) or write your own Ansible playbooks to manage your Forem.
+We provide some example [Dynamic Inventories](https://docs.ansible.com/ansible/latest/user_guide/intro_dynamic_inventory.html) for you to use on your self-hosted Forem. You can use them to run [Ansible Adhoc Commands](https://docs.ansible.com/ansible/latest/user_guide/intro_adhoc.html) or write your own Ansible playbooks to manage your Forem.
 
 See the [SSH Examples](https://github.com/forem/selfhost#ssh-examples) for some commands that you can run with an Ansible Adhoc command.
 
