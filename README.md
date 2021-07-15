@@ -3,7 +3,7 @@ This is a repo for setting up a free, self-managed install of [Forem](https://gi
 
 **Please note that Forem is a complex piece of software, and hosting and managing it in a cloud environment is non-trivial.** Use of this repo assumes a **high level of familiarity** with the following:
 - [Ansible](https://www.ansible.com/)
-- your chosen cloud provider - both CLI and UI use
+- Your chosen cloud provider - both CLI and UI use
 - [Python 3 and pip3](https://www.python.org/)
 - [systemd](https://www.freedesktop.org/wiki/Software/systemd/)
 - [Podman](https://podman.io/)
