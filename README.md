@@ -1,7 +1,7 @@
 # Forem Self-Host
-This is a repo for setting up a free, self-managed install of [Forem](https://github.com/forem/forem) on a [Fedora CoreOS](https://getfedora.org/en/coreos) VM running on one of a few popular cloud providers (current support for [DigitalOcean](https://www.digitalocean.com/), [AWS](https://aws.amazon.com/), and [Google Cloud](https://cloud.google.com/)). Local development is also supported using a VM on Linux via [QEMU](https://www.qemu.org/). The underlying technologies and concepts used here can also be extended beyond the scope of this repo to deploy Forem to other environments, such as baremetal / custom VMs, and other operating systems that support systemd.
+This is a repo for setting up a free, self-managed install of [Forem](https://github.com/forem/forem) on a [Fedora CoreOS](https://getfedora.org/en/coreos) VM running on one of a few popular cloud providers (current support for [DigitalOcean](https://www.digitalocean.com/), [AWS](https://aws.amazon.com/), and [Google Cloud](https://cloud.google.com/)). Local development is also supported using a VM on Linux via [QEMU](https://www.qemu.org/).
 
-**Please note that Forem is a complex piece of software, and hosting and managing it in a cloud environment is non-trivial.** Use of this repo assumes a **high level of familiarity** with the following:
+**Please note that Forem is a complex piece of software, and hosting and managing it in a cloud environment is non-trivial.** While the recipes and scripts here are expected to work for the limited scenarios we tested against, use and modification of the recipes, or altering the deployed environment, may require familiarity with the following layers of the tech stack we built with, and ongoing maintenance of the deployed system may require interacting with any of these technologies:
 - [Ansible](https://www.ansible.com/)
 - Your chosen cloud provider - both CLI and UI use
 - [Python 3 and pip3](https://www.python.org/)
@@ -12,6 +12,8 @@ This is a repo for setting up a free, self-managed install of [Forem](https://gi
   - [Ignition](https://coreos.github.io/ignition/)
 
 **If a Self-Hosted Forem is not right for you, we offer a fully-managed, enterprise solution called Forem Cloud; no technical setup required. For more information, [please contact us via this form](https://formkeep.com/p/cfa67316d1c12d23ecb3c08b359f944b).**
+
+For those that want to DIY beyond the scope of this repo, you can use the systemd units in the [Butane template](https://github.com/forem/selfhost-devel/blob/main/playbooks/templates/forem.yml.j2) as an example of how to run Forem without Fedora CoreOS on a Linux distribution that supports systemd, or customize that template to fit your needs or create a bootable Ignition configuration to consume on bare metal or in a custom VM.
 
 The goal of this project is to provide you with the choice, freedom, and cost-effectiveness to host your own Forem community as you see fit.
 
