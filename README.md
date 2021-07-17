@@ -23,7 +23,7 @@ We can't wait to see the community you selfhost with Forem!
 
 - Git
 - [Python 3.x](https://www.python.org/downloads/) and pip3
-    - macOS: `brew install pip3` **Note: this will likely use Python 3 at `/usr/local/bin/python3`, _not_ `/usr/bin/python3`, requiring that you set `ansible_python_interpreter` to `/usr/local/bin/python` in inventory or via extra vars (eg `-e ansible_python_interpreter=/usr/local/bin/python`)**
+    - macOS: `brew install python3` **Note: this will likely use Python 3 at `/usr/local/bin/python3`, _not_ `/usr/bin/python3`, requiring that you set `ansible_python_interpreter` to `/usr/local/bin/python` in inventory or via extra vars (eg `-e ansible_python_interpreter=/usr/local/bin/python`)**
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/index.html): `ansible-core` 2.11 or greater (provided by Ansible 4.0.0)
 - [Butane](https://github.com/coreos/butane/blob/master/docs/getting-started.md#getting-butane)
     - Mac OS: `brew install butane`
