@@ -1,9 +1,9 @@
 ---
 # tasks file for preflight
 
-- name: Fetch public WAN IP json
+- name: Fetch public WAN IPv4 address json
   ansible.builtin.uri:
-    url: https://icanhazip.com/
+    url: https://checkip.amazonaws.com/
     return_content: yes
   changed_when: no
   register: local_wan_json
