@@ -5,7 +5,6 @@ all:
     ssh_key: "{{ lookup('file', '~/.ssh/forem.pub') }}"
     app_protocol: https://
     database_pool_size: 10
-    elasticsearch_url: http://localhost:9200
     force_ssl_in_rails: "true"
     lang: en_US.UTF-8
     node_env: "{{ forem_environment }}"
