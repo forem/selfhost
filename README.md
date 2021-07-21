@@ -13,7 +13,7 @@ This is a repo for setting up a free, self-managed install of [Forem](https://gi
 
 **If a Self-Hosted Forem is not right for you, we offer a fully-managed, enterprise solution called Forem Cloud; no technical setup required. For more information, [please contact us via this form](https://formkeep.com/p/cfa67316d1c12d23ecb3c08b359f944b).**
 
-For those that want to DIY beyond the scope of this repo, you can use the systemd units in the [Butane template](https://github.com/forem/selfhost-devel/blob/main/playbooks/templates/forem.yml.j2) as an example of how to run Forem without Fedora CoreOS on a Linux distribution that supports systemd, or customize that template to fit your needs or create a bootable Ignition configuration to consume on bare metal or in a custom VM.
+For those that want to DIY beyond the scope of this repo, you can use the systemd units in the [Butane template](https://github.com/forem/selfhost/blob/main/playbooks/templates/forem.yml.j2) as an example of how to run Forem without Fedora CoreOS on a Linux distribution that supports systemd, or customize that template to fit your needs or create a bootable Ignition configuration to consume on bare metal or in a custom VM.
 
 The goal of this project is to provide you with the choice, freedom, and cost-effectiveness to host your own Forem community as you see fit.
 
@@ -68,7 +68,7 @@ _Note: Following this quick start guide with the cloud provider of your choice w
     - [Google Cloud](https://github.com/forem/selfhost#provision-2)
 10) Once your Forem VM is set up with your chosen cloud provider, you will need to point DNS at the IP address that is output at the end of the provider playbook.
 11) Once DNS is pointed at your Forem VM, you will need to restart the Forem Traefik service (`sudo systemctl restart forem-traefik.service`) [via SSH on your Forem server](https://github.com/forem/selfhost#ssh-examples) to generate a TLS cert.
-12) Go to your Forem domain name and create your first account. Please see the Forem Admin documentation located [here](https://forem-admin.netlify.app/) for more information on setting up your Forem.
+12) Go to your Forem domain name and create your first account. Please see the Forem Admin documentation located [here](https://admin.forem.com/) for more information on setting up your Forem.
 
 ----
 
