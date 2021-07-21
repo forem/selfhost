@@ -220,4 +220,4 @@
       - "Please add an A entry for {{ app_domain }} that points to {{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
       - "Example:"
       - "    {{ app_domain }} IN A {{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
-      - "Once you have DNS resolving to this EC2 instance please read the Forem Admin Docs: https://forem-admin.netlify.app/"
+      - "Once you have DNS resolving to this EC2 instance please read the Forem Admin Docs: https://admin.forem.com/"

@@ -123,4 +123,4 @@
       - "Please add an A entry for {{ app_domain }} that points to {{ forem_gcp_address.address }}"
       - "Example:"
       - "    {{ app_domain }} IN A {{ forem_gcp_address.address }}"
-      - "Once you have DNS resolving to this Google Compute VM please read the Forem Admin Docs: https://forem-admin.netlify.app/"
+      - "Once you have DNS resolving to this Google Compute VM please read the Forem Admin Docs: https://admin.forem.com/"
