@@ -4,3 +4,4 @@ collections:
     version: 1.0.0
   - name: amazon.aws
   - name: community.aws
+  - name: google.cloud
