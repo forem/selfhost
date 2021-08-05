@@ -809,7 +809,7 @@ systemd:
       Description=Forem pod service
       Wants=network.target
       After=network-online.target forem-container.service
-      Wants=forem-postgresql.service forem-redis.service forem.service forem-traefik.service
+      Wants=forem-postgresql.service forem-redis.service forem-imgproxy.service forem.service forem-traefik.service
       Before=forem-postgresql.service forem-redis.service forem-openresty.service forem.service
 
       [Service]
