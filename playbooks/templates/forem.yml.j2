@@ -221,7 +221,7 @@ storage:
 
             echo "The remote container ${CONTAINER} repository or tag does not exist. Please provide a valid container repository and tag."
             echo "Example: foremimg quay.io/forem/forem:latest"
-            exit 0
+            exit 1
 
           fi
 
@@ -793,11 +793,15 @@ systemd:
       Wants=network.target
       After=network-online.target
       Before=forem-pod.service forem.service
+      StartLimitInterval=200
+      StartLimitBurst=5
 
       [Service]
-      ExecStart=/usr/local/bin/foremimg
-
       Type=oneshot
+      ExecStart=/usr/local/bin/foremimg
+      Restart=on-failure
+      RestartSec=30
+      SyslogIdentifier=%N
 
       [Install]
       WantedBy=multi-user.target default.target
