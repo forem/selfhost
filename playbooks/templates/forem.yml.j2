@@ -690,6 +690,7 @@ storage:
             CustomFrameOptionsValue = "SAMEORIGIN"
             ForceSTSHeader = true
             FrameDeny = true
+	    # set ReferrerPolicy to "strict-origin-when-cross-origin" if youtube embedding is broken
             ReferrerPolicy = "same-origin"
             SSLRedirect = true
             stsIncludeSubdomains = true
