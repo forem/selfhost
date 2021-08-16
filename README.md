@@ -58,7 +58,9 @@ _Note: Following this quick start guide with the cloud provider of your choice w
         - vault_imgproxy_key
         - vault_imgproxy_salt
         - vault_forem_postgres_password
-7. Generate a [SSH key](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key) and save it to `${HOME}/.ssh/forem`. Use `ls -lh ~/.ssh/forem*` to ensure you have both a `${HOME}/.ssh/forem` private key, and a corresponding `${HOME}/.ssh/forem.pub` public key.
+7. - If you choose to use **DigitalOcean or Google Cloud** as your cloud provider, you will need to generate a [SSH key](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key) and save it to `${HOME}/.ssh/forem`. Use `ls -lh ~/.ssh/forem*` to ensure you have both a `${HOME}/.ssh/forem` private key, and a corresponding `${HOME}/.ssh/forem.pub` public key.
+   - If you use **AWS** as your cloud provider, you will need to generate an RSA-based SSH key and save it to the file path `~/.ssh/id_rsa.pub.` 
+   Please visit the **AWS RSA based SSH key** section in our [Self Host: Quick Start in Depth](https://forem.dev/foremteam/self-host-quick-start-in-depth-2165) guide for instructions on creating an RSA-based key. 
 8) Pick a supported cloud provider and set it up on your workstation
     - [AWS](https://github.com/forem/selfhost#aws)
     - [DigitalOcean](https://github.com/forem/selfhost#digitalocean)
