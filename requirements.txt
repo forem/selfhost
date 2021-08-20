@@ -1,4 +1,4 @@
-ansible==4.0.0
+ansible==4.4.0
 boto
 boto3
 botocore
