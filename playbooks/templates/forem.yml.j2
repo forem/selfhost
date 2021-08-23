@@ -690,7 +690,8 @@ storage:
             CustomFrameOptionsValue = "SAMEORIGIN"
             ForceSTSHeader = true
             FrameDeny = true
-            ReferrerPolicy = "same-origin"
+            # ReferrerPolicy configured in the setup.yml during provisioning
+            ReferrerPolicy = {{ referrer_policy }}
             SSLRedirect = true
             stsIncludeSubdomains = true
             stsPreload = true
