@@ -33,10 +33,6 @@ all:
           default_email: REPLACEME
           forem_subdomain_name: www # can be subdomain, i.e. "community" in community.mainwebsite.com
           forem_server_hostname: host # You may change to something else if you choose (i.e. server, srv, etc)
-
-          # CHANGE_OPTIONAL - strict-origin-when-cross-origin enables embedded youtube video playback
-          referrer_policy: "same-origin"
-          # referrer_policy: "strict-origin-when-cross-origin"
           app_domain: "{{ forem_subdomain_name }}.{{ forem_domain_name }}"
           secret_key_base: "{{ vault_secret_key_base }}"
           session_key: _FOREMSELFHOST_Session
