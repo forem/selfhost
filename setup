@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# -e (-o errexit): exit immediately on error
+# -u (-o nounset): treat unset variables as erros
+# -o pipefail: propagate intermediate errors in pipelines
+set -euo pipefail
+
+main() {
+  print_step "Verifying that pip is available"
+  pip=$(command -v pip3 || command -v pip || echo -n "")
+  if [ -z "$pip" ]; then
+    print_error "Cannot find pip, aborting."
+    exit 1
+  fi
+
+  print_step "Installing and initializing pipenv"
+  $pip install pipenv
+
+  print_step "Installing Python dependencies"
+  pipenv install
+
+  print_step "Generating Ansible Vault secret"
+  pwgen -1 24|tee ~/.forem_selfhost_ansible_vault_password
+
+  print_step "Copying example inventory"
+  cp -v inventory/example/setup.yml inventory/forem/setup.yml
+
+  print_step "Generating Vault secrets"
+  echo -n $(pwgen -1 128) | ansible_vault vault_secret_key_base
+  echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault vault_imgproxy_key
+  echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault vault_imgproxy_salt
+  echo -n $(pwgen -1 128) | ansible_vault vault_forem_postgres_password
+  print_info "Please add these secrets at the appropiate places in inventory/forem/setup.yml"
+
+  print_info "Before continuing please activate your pipenv with the following command: pipenv shell"
+}
+
+ansible_vault() {
+  pipenv run ansible-vault encrypt_string --stdin-name $1
+}
+
+### OUTPUT HELPERS
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NO_COLOR='\033[0m'
+
+color_print() {
+  local color=$1
+  shift
+  printf "\n${color}$*${NO_COLOR}\n"
+}
+
+print_step() {
+  color_print $GREEN $@
+}
+
+print_info() {
+  color_print $YELLOW $@
+}
+
+print_error() {
+  color_print $RED $@ 1>&2 # erros go to STDERR
+}
+### END OUTPUT HELPERS
+
+main $@
