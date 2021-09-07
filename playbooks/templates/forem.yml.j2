@@ -691,7 +691,7 @@ storage:
             ForceSTSHeader = true
             FrameDeny = true
             # ReferrerPolicy configured in the setup.yml during provisioning
-            ReferrerPolicy = {{ referrer_policy }}
+            ReferrerPolicy = "{{ referrer_policy }}"
             SSLRedirect = true
             stsIncludeSubdomains = true
             stsPreload = true
