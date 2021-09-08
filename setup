@@ -59,7 +59,12 @@ NO_COLOR='\033[0m'
 color_print() {
   local color=$1
   shift
-  printf "\n${color}$*${NO_COLOR}\n"
+  # Only write colorized output when STDOUT is a terminal
+  if [ -t 1 ]; then
+    printf "\n${color}$*${NO_COLOR}\n"
+  else
+    printf "\n$*\n"
+  fi
 }
 
 print_step() {
