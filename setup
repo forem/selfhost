@@ -5,6 +5,9 @@
 # -o pipefail: propagate intermediate errors in pipelines
 set -euo pipefail
 
+VAULT_PASSWORD_FILE=~/.forem_selfhost_ansible_vault_password
+INVENTORY_FILE=inventory/forem/setup.yml
+
 main() {
   print_step "Verifying that pip is available"
   pip=$(command -v pip3 || command -v pip || echo -n "")
@@ -20,17 +23,25 @@ main() {
   pipenv install
 
   print_step "Generating Ansible Vault secret"
-  pwgen -1 24|tee ~/.forem_selfhost_ansible_vault_password
+  if [ -f "$VAULT_PASSWORD_FILE" ]; then
+    print_info "Password file already exists, skipping this step."
+  else
+    pwgen -1 24|tee $VAULT_PASSWORD_FILE
+  fi
 
   print_step "Copying example inventory"
-  cp -v inventory/example/setup.yml inventory/forem/setup.yml
+  if [ -f "$INVENTORY_FILE" ]; then
+    print_info "Inventory file already exists, skipping this step."
+  else
+    cp -v inventory/example/setup.yml INVENTORY_FILE
+  fi
 
   print_step "Generating Vault secrets"
   echo -n $(pwgen -1 128) | ansible_vault vault_secret_key_base
   echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault vault_imgproxy_key
   echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault vault_imgproxy_salt
   echo -n $(pwgen -1 128) | ansible_vault vault_forem_postgres_password
-  print_info "Please add these secrets at the appropiate places in inventory/forem/setup.yml"
+  print_info "Please add these secrets at the appropiate places in ${INVENTORY_FILE}"
 
   print_info "Before continuing please activate your pipenv with the following command: pipenv shell"
 }
