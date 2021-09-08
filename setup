@@ -20,7 +20,7 @@ main() {
   $pip install pipenv
 
   print_step "Installing Python dependencies"
-  pipenv install
+  pipenv install --keep-outdated # we don't want to update packages here
 
   print_step "Generating Ansible Vault secret"
   if [ -f "$VAULT_PASSWORD_FILE" ]; then
