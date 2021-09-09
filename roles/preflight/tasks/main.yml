@@ -24,12 +24,12 @@
 
 - name: Read requirements.txt
   ansible.builtin.set_fact:
-    python_requirements: "{{ lookup('pipe', 'pipenv run pip freeze').splitlines() }}"
+    python_requirements_txt: "{{ lookup('file', '../../../requirements.txt').splitlines() }}"
 
 - name: Generate list of missing pip prerequisites
   ansible.builtin.set_fact:
     python_required_packages: |
-      {% for item in python_requirements %}
+      {% for item in python_requirements_txt %}
       {{ item.split('=')[0] }}
       {% endfor %}
 
