@@ -10,17 +10,14 @@ INVENTORY_FILE=inventory/forem/setup.yml
 
 main() {
   print_step "Verifying that pip is available"
-  pip=$(command -v pip3 || command -v pip || echo -n "")
+  pip=$(command -v pip3 || echo -n "")
   if [ -z "$pip" ]; then
     print_error "Cannot find pip, aborting."
     exit 1
   fi
 
-  print_step "Installing and initializing pipenv"
-  $pip install pipenv
-
   print_step "Installing Python dependencies"
-  pipenv install --keep-outdated # we don't want to update packages here
+  pip3 install -r requirements.txt
 
   print_step "Generating Ansible Vault secret"
   if [ -f "$VAULT_PASSWORD_FILE" ]; then
@@ -37,17 +34,14 @@ main() {
   fi
 
   print_step "Generating Vault secrets"
-  echo -n $(pwgen -1 128) | ansible_vault vault_secret_key_base
-  echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault vault_imgproxy_key
-  echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault vault_imgproxy_salt
-  echo -n $(pwgen -1 128) | ansible_vault vault_forem_postgres_password
-  print_info "Please add these secrets at the appropiate places in ${INVENTORY_FILE}"
-
-  print_info "Before continuing please activate your pipenv with the following command: pipenv shell"
+  echo -n $(pwgen -1 128) | ansible_vault_encrypt vault_secret_key_base
+  echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault_encrypt vault_imgproxy_key
+  echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault_encrypt vault_imgproxy_salt
+  echo -n $(pwgen -1 128) | ansible_vault_encrypt vault_forem_postgres_password
 }
 
-ansible_vault() {
-  pipenv run ansible-vault encrypt_string --stdin-name $1
+ansible_vault_encrypt() {
+  ansible-vault encrypt_string --stdin-name $1
 }
 
 ### OUTPUT HELPERS
