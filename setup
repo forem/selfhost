@@ -5,7 +5,8 @@
 # -o pipefail: propagate intermediate errors in pipelines
 set -euo pipefail
 
-VAULT_PASSWORD_FILE=~/.forem_selfhost_ansible_vault_password
+CONFIG_HOME="${HOME}/.config/forem"
+VAULT_PASSWORD_FILE="${CONFIG_HOME}/selfhost_ansible_vault_password"
 INVENTORY_FILE=inventory/forem/setup.yml
 
 main() {
@@ -23,6 +24,7 @@ main() {
   if [ -f "$VAULT_PASSWORD_FILE" ]; then
     print_info "Password file already exists, skipping this step."
   else
+    mkdir -p $CONFIG_HOME
     pwgen -1 24|tee $VAULT_PASSWORD_FILE
   fi
 

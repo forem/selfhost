@@ -23,7 +23,7 @@ We can't wait to see the community you selfhost with Forem!
 
 - Git
 - [Python 3.x](https://www.python.org/downloads/) and pip3
-    - macOS: `brew install python3` 
+    - macOS: `brew install python3`
     > **Note**: This will likely use **Python 3** at `/usr/local/bin/python3`, _not_ `/usr/bin/python3`, requiring that you set `ansible_python_interpreter` to `/usr/local/bin/python` in inventory or via extra vars (eg `-e ansible_python_interpreter=/usr/local/bin/python`)
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/index.html): `ansible-core` 2.11 or greater (provided by Ansible 4.0.0)
 - [Butane](https://github.com/coreos/butane/blob/master/docs/getting-started.md#getting-butane)
@@ -45,7 +45,8 @@ _Note: Following this quick start guide with the cloud provider of your choice w
 3) Install Requirements:
     - `pip3 install -r requirements.txt`
 4) Generate an Ansible Vault password
-    - `pwgen -1 24|tee ~/.forem_selfhost_ansible_vault_password`
+    - `mkdir -p ~/.config/forem`
+    - `pwgen -1 24|tee ~/.config/forem/selfhost_ansible_vault_password`
 5) Copy example Ansible Inventory from `inventory/example/setup.yml` to `inventory/forem/setup.yml`
 6) Edit `inventory/forem/setup.yml` Ansible Inventory with your Forem settings
     - Edit the following Ansible inventory variables:
@@ -59,8 +60,8 @@ _Note: Following this quick start guide with the cloud provider of your choice w
         - vault_imgproxy_salt
         - vault_forem_postgres_password
 7. - If you choose to use **DigitalOcean or Google Cloud** as your cloud provider, you will need to generate a [SSH key](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key) and save it to `${HOME}/.ssh/forem`. Use `ls -lh ~/.ssh/forem*` to ensure you have both a `${HOME}/.ssh/forem` private key, and a corresponding `${HOME}/.ssh/forem.pub` public key.
-   - If you use **AWS** as your cloud provider, you will need to generate an RSA-based SSH key and save it to the file path `~/.ssh/id_rsa.pub.` 
-   Please visit the **AWS RSA based SSH key** section in our [Self Host: Quick Start in Depth](https://forem.dev/foremteam/self-host-quick-start-in-depth-2165) guide for instructions on creating an RSA-based key. 
+   - If you use **AWS** as your cloud provider, you will need to generate an RSA-based SSH key and save it to the file path `~/.ssh/id_rsa.pub.`
+   Please visit the **AWS RSA based SSH key** section in our [Self Host: Quick Start in Depth](https://forem.dev/foremteam/self-host-quick-start-in-depth-2165) guide for instructions on creating an RSA-based key.
 8) Pick a supported cloud provider and set it up on your workstation
     - [AWS](https://github.com/forem/selfhost#aws)
     - [DigitalOcean](https://github.com/forem/selfhost#digitalocean)
