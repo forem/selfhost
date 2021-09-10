@@ -32,7 +32,7 @@ main() {
   if [ -f "$INVENTORY_FILE" ]; then
     print_info "Inventory file already exists, skipping this step."
   else
-    cp -v inventory/example/setup.yml INVENTORY_FILE
+    cp -v inventory/example/setup.yml $INVENTORY_FILE
   fi
 
   print_step "Generating Vault secrets"
@@ -40,6 +40,7 @@ main() {
   echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault_encrypt vault_imgproxy_key
   echo -n $(xxd -g 2 -l 64 -p /dev/urandom | tr -d '\n') | ansible_vault_encrypt vault_imgproxy_salt
   echo -n $(pwgen -1 128) | ansible_vault_encrypt vault_forem_postgres_password
+  print_info "Use these secrets to replace the placeholders in ${INVENTORY_FILE}"
 }
 
 ansible_vault_encrypt() {

@@ -39,11 +39,45 @@ We can't wait to see the community you selfhost with Forem!
 
 _Note: Following this quick start guide with the cloud provider of your choice will cost you money! Please consult with each cloud provider to figure out how much your Forem will cost you per month._
 
-1) Clone the forem/selfhost repo to your local computer:
-     - `git clone https://github.com/forem/selfhost.git`
-2) Change into the selfhost directory: `cd selfhost`
-3) Install Requirements:
-    - Sytem-wide:
+Start by cloning the `forem/selfhost` repository to your local computer and change into it:
+
+```
+git clone https://github.com/forem/selfhost.git
+cd selfhost
+```
+
+After this step you have two choices: a semi-automated setup via a script or a completely manual installation.
+
+### Semi-automated setup
+
+We have a script in place that can provide several of the necessary setup tasks for you. It will perform steps the first 3 steps of the manual installation process (installing Python dependencies, generating an Ansible Vault password and copying the inventory definition for you). It will also generate the secrets needed for step 4.
+
+```
+./setup
+
+Verifying that pip is available
+
+Installing Python dependencies
+[output omitted]
+
+Generating Ansible Vault secret
+ixooGe3ob0shob8soo6AhYie
+
+Copying example inventory
+'inventory/example/setup.yml' -> 'inventory/forem/setup.yml'
+
+Generating Vault secrets
+[output omitted]
+
+Use these secrets to replace the placeholders in inventory/forem/setup.yml
+```
+
+Once the script finished running, continue from step 4. of the manual installation process described below.
+
+### Manual installation
+
+1) Install Python dependencies:
+    - System-wide:
         - `pip3 install -r requirements.txt`
     - In a virtual environment: create a virtual env first, then enter it before installing the dependencies. Then remain in the virtual env unless you're done with the setup process. Example with Python 3's native [`venv` module](https://docs.python.org/3/library/venv.html):
         - `python3 -m venv /path/to/new/virtual/environment`
@@ -51,35 +85,36 @@ _Note: Following this quick start guide with the cloud provider of your choice w
         - `pip3 install -r requirements.txt`
         - perform rest of setup
         - `deactivate` (leaves the virtual env)
-4) Generate an Ansible Vault password
+1) Generate an Ansible Vault password
     - `mkdir -p ~/.config/forem`
     - `pwgen -1 24|tee ~/.config/forem/selfhost_ansible_vault_password`
-5) Copy example Ansible Inventory from `inventory/example/setup.yml` to `inventory/forem/setup.yml`
-6) Edit `inventory/forem/setup.yml` Ansible Inventory with your Forem settings
+1) Copy example Ansible Inventory from `inventory/example/setup.yml` to `inventory/forem/setup.yml`
+1) Edit `inventory/forem/setup.yml` Ansible Inventory with your Forem settings
     - Edit the following Ansible inventory variables:
         - default_email (Admin Email for system to use)
         - forem_domain_name (A domain name that you own and set A records on at your DNS provider)
         - forem_subdomain_name (defaults to www)
         - forem_server_hostname (defaults to host)
-    - Generate and save Ansible Inventory secrets using [`ansible-vault encrypt_string`](https://docs.ansible.com/ansible/latest/user_guide/vault.html#encrypting-individual-variables-with-ansible-vault) for the variables below. See ["Required Ansible Vault secret variables" in the example setup.yml](https://github.com/forem/selfhost/blob/main/inventory/example/setup.yml#L64), which contains the required commands to generate each variable's value:
+    - If you used the setup script you can use the previously generated inventory secrets here. Otherwise, you have to use  [`ansible-vault encrypt_string`](https://docs.ansible.com/ansible/latest/user_guide/vault.html#encrypting-individual-variables-with-ansible-vault) to create the secrets listed below. See ["Required Ansible Vault secret variables" in the example setup.yml](https://github.com/forem/selfhost/blob/main/inventory/example/setup.yml#L64), which contains the required commands to generate each variable's value:
         - vault_secret_key_base
         - vault_imgproxy_key
         - vault_imgproxy_salt
         - vault_forem_postgres_password
-7. - If you choose to use **DigitalOcean or Google Cloud** as your cloud provider, you will need to generate a [SSH key](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key) and save it to `${HOME}/.ssh/forem`. Use `ls -lh ~/.ssh/forem*` to ensure you have both a `${HOME}/.ssh/forem` private key, and a corresponding `${HOME}/.ssh/forem.pub` public key.
+1) Setup SSH access for your cloud provider
+    - If you choose to use **DigitalOcean or Google Cloud** as your cloud provider, you will need to generate a [SSH key](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key) and save it to `${HOME}/.ssh/forem`. Use `ls -lh ~/.ssh/forem*` to ensure you have both a `${HOME}/.ssh/forem` private key, and a corresponding `${HOME}/.ssh/forem.pub` public key.
    - If you use **AWS** as your cloud provider, you will need to generate an RSA-based SSH key and save it to the file path `~/.ssh/id_rsa.pub.`
    Please visit the **AWS RSA based SSH key** section in our [Self Host: Quick Start in Depth](https://forem.dev/foremteam/self-host-quick-start-in-depth-2165) guide for instructions on creating an RSA-based key.
-8) Pick a supported cloud provider and set it up on your workstation
+1) Pick a supported cloud provider and set it up on your workstation
     - [AWS](https://github.com/forem/selfhost#aws)
     - [DigitalOcean](https://github.com/forem/selfhost#digitalocean)
     - [Google Cloud](https://github.com/forem/selfhost#google-compute)
-9) Run the Ansible Playbook for your chosen cloud provider
+1) Run the Ansible Playbook for your chosen cloud provider
     - [AWS](https://github.com/forem/selfhost#provision)
     - [DigitalOcean](https://github.com/forem/selfhost#provision-1)
     - [Google Cloud](https://github.com/forem/selfhost#provision-2)
-10) Once your Forem VM is set up with your chosen cloud provider, you will need to point DNS at the IP address that is output at the end of the provider playbook.
-11) Once DNS is pointed at your Forem VM, you will need to restart the Forem Traefik service (`sudo systemctl restart forem-traefik.service`) [via SSH on your Forem server](https://github.com/forem/selfhost#ssh-examples) to generate a TLS cert.
-12) Go to your Forem domain name and create your first account. Please see the Forem Admin documentation located [here](https://admin.forem.com/) for more information on setting up your Forem.
+1) Once your Forem VM is set up with your chosen cloud provider, you will need to point DNS at the IP address that is output at the end of the provider playbook.
+1) Once DNS is pointed at your Forem VM, you will need to restart the Forem Traefik service (`sudo systemctl restart forem-traefik.service`) [via SSH on your Forem server](https://github.com/forem/selfhost#ssh-examples) to generate a TLS cert.
+1) Go to your Forem domain name and create your first account. Please see the Forem Admin documentation located [here](https://admin.forem.com/) for more information on setting up your Forem.
 
 ----
 
