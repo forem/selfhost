@@ -50,7 +50,7 @@ After this step you have two choices: a semi-automated setup via a script or a c
 
 ### Semi-automated setup
 
-We have a script in place that can provide several of the necessary setup tasks for you. It will perform steps the first 3 steps of the manual installation process (installing Python dependencies, generating an Ansible Vault password and copying the inventory definition for you). It will also generate the secrets needed for step 4.
+We have a script in place that will perform several of the necessary setup tasks for you. It will take care of the first 3 steps of the manual installation process (installing Python dependencies, generating an Ansible Vault password and copying the inventory definition for you). It will also generate the secrets needed for step 4.
 
 ```
 ./setup
