@@ -39,7 +39,7 @@ We can't wait to see the community you selfhost with Forem!
 
 _Note: Following this quick start guide with the cloud provider of your choice will cost you money! Please consult with each cloud provider to figure out how much your Forem will cost you per month._
 
-Start by cloning the `forem/selfhost` repository to your local computer and change into it:
+Start by cloning the `forem/selfhost` repository to your local computer and change into the newly created directory:
 
 ```
 git clone https://github.com/forem/selfhost.git
