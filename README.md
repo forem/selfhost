@@ -43,7 +43,14 @@ _Note: Following this quick start guide with the cloud provider of your choice w
      - `git clone https://github.com/forem/selfhost.git`
 2) Change into the selfhost directory: `cd selfhost`
 3) Install Requirements:
-    - `pip3 install -r requirements.txt`
+    - Sytem-wide:
+        - `pip3 install -r requirements.txt`
+    - In a virtual environment: create a virtual env first, then enter it before installing the dependencies. Then remain in the virtual env unless you're done with the setup process. Example with Python 3's native [`venv` module](https://docs.python.org/3/library/venv.html):
+        - `python3 -m venv /path/to/new/virtual/environment`
+        - `source <venv>/bin/activate`
+        - `pip3 install -r requirements.txt`
+        - perform rest of setup
+        - `deactivate` (leaves the virtual env)
 4) Generate an Ansible Vault password
     - `mkdir -p ~/.config/forem`
     - `pwgen -1 24|tee ~/.config/forem/selfhost_ansible_vault_password`
