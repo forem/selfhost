@@ -369,6 +369,12 @@ All of these examples need to be run via SSH on the Fedora CoreOS server as the 
 ssh core@<SERVER IP ADDRESS>
 ```
 
+If your key doesn't have a default name like `id_dsa`, `id_ecdsa`, `id_rsa`, etc. you must specify it with the `-i identity_file` option. For example, this is the command you need to run for a key named `forem`:
+
+```
+ssh -i ~/.ssh/forem core@<SERVER IP ADDRESS>
+```
+
 ### foremctl
 
 We have a helper script (Forem Control) called `foremctl`. It is used to control your Forem via CLI.
