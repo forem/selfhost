@@ -5,3 +5,4 @@
   file:
     path: "{{ fcos_tmp_download_dir.path }}"
     state: absent
+
