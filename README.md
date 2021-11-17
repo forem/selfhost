@@ -1,3 +1,4 @@
+
 # Forem Self-Host
 This is a repo for setting up a free, self-managed install of [Forem](https://github.com/forem/forem) on a [Fedora CoreOS](https://getfedora.org/en/coreos) VM running on one of a few popular cloud providers (current support for [DigitalOcean](https://www.digitalocean.com/), [AWS](https://aws.amazon.com/), and [Google Cloud](https://cloud.google.com/)). Local development is also supported using a VM on Linux via [QEMU](https://www.qemu.org/).
 
@@ -18,6 +19,47 @@ For those that want to DIY beyond the scope of this repo, you can use the system
 The goal of this project is to provide you with the choice, freedom, and cost-effectiveness to host your own Forem community as you see fit.
 
 We can't wait to see the community you selfhost with Forem!
+
+## Table of Contents
+- [Forem Self-Host](#forem-self-host)
+  * [Requirements](#requirements)
+  * [Quick Start](#quick-start)
+    + [Semi-automated setup](#semi-automated-setup)
+    + [Manual installation](#manual-installation)
+  * [Provisioning Targets](#provisioning-targets)
+    + [AWS](#aws)
+      - [Setup](#setup)
+      - [Provision](#provision)
+    + [DigitalOcean](#digitalocean)
+      - [Setup](#setup-1)
+      - [Provision](#provision-1)
+    + [Google Cloud](#google-cloud)
+      - [Setup](#setup-2)
+      - [Provision](#provision-2)
+  * [Ansible Dynamic Inventories](#ansible-dynamic-inventories)
+    + [AWS](#aws-1)
+    + [DigitalOcean](#digitalocean-1)
+    + [Google Compute](#google-compute)
+  * [Configuration Internals](#configuration-internals)
+    + [systemd](#systemd)
+    + [Forem configs](#forem-configs)
+  * [SSH Examples](#ssh-examples)
+    + [foremctl](#foremctl)
+    + [Update Forem to the latest version and restart](#update-forem-to-the-latest-version-and-restart)
+    + [foremimg](#foremimg)
+    + [Set the Forem container repository and tag](#set-the-forem-container-repository-and-tag)
+    + [Update Forem to the latest version with no restart](#update-forem-to-the-latest-version-with-no-restart)
+    + [Rollback Forem to the last running version and restart](#rollback-forem-to-the-last-running-version-and-restart)
+    + [Update Fedora CoreOS to the latest stable version](#update-fedora-coreos-to-the-latest-stable-version)
+    + [Backup your Forem data](#backup-your-forem-data)
+  * [Development](#development)
+    + [Install Dependencies](#install-dependencies)
+      - [SSH Key](#ssh-key)
+      - [SSH Config](#ssh-config)
+      - [Ansible Vault](#ansible-vault)
+      - [Create Forem Ansible Inventory](#create-forem-ansible-inventory)
+      - [Launch Forem Locally](#launch-forem-locally)
+      - [Local SSH Access](#local-ssh-access)
 
 ## Requirements
 
