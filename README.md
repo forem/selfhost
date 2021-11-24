@@ -546,7 +546,7 @@ You can make a backup of your Forem data by creating gzipped tarball of `/opt/fo
 
 ```
 foremctl stop
-sudo tar czf ~core/"$(date '+%Y-%m-%d')-forem-data.tar.gz" /opt/forem
+sudo tar czpf ~core/"$(date '+%Y-%m-%d')-forem-data.tar.gz" /opt/forem
 foremctl start
 ```
 _Note: Running `foremctl stop` will cause downtime for your Forem!_
