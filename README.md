@@ -137,7 +137,7 @@ Once the script finished running, continue from step 4. of the manual installati
         - forem_domain_name (A domain name that you own and set A records on at your DNS provider)
         - forem_subdomain_name (defaults to www)
         - forem_server_hostname (defaults to host)
-    - If you used the setup script you can use the previously generated inventory secrets here. Otherwise, you have to use  [`ansible-vault encrypt_string`](https://docs.ansible.com/ansible/latest/user_guide/vault.html#encrypting-individual-variables-with-ansible-vault) to create the secrets listed below. See ["Required Ansible Vault secret variables" in the example setup.yml](https://github.com/forem/selfhost/blob/main/inventory/example/setup.yml#L64), which contains the required commands to generate each variable's value:
+    - If you used the setup script you can use the previously generated inventory secrets here. Otherwise, you have to use  [`ansible-vault encrypt_string`](https://docs.ansible.com/ansible/latest/user_guide/vault.html#encrypting-individual-variables-with-ansible-vault) to create the secrets listed below. See ["Required Ansible Vault secret variables" in the example setup.yml](https://github.com/forem/selfhost/blob/main/inventory/example/setup.yml#L67), which contains the required commands to generate each variable's value:
         - vault_secret_key_base
         - vault_imgproxy_key
         - vault_imgproxy_salt
