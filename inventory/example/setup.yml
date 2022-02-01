@@ -66,6 +66,9 @@ all:
 
           # Required Ansible Vault secret variables
           # Use the following example commands below in a terminal to generate the required variables with Ansible Vault encrypt_string
+          # These commands should be run in the selfhost directory, since the
+          # ansible.cfg identifies the vault password which will be used to decrypt
+          # if ansible-vault prompts for a password, something is not right
           # See this URL to learn more about ansible-vault:
           # https://docs.ansible.com/ansible/latest/user_guide/vault.html#encrypting-individual-variables-with-ansible-vault
 
