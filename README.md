@@ -632,7 +632,8 @@ password needs to be set once and never changed. If you lose this password or
 change this password you will need to reset all of your encrypted variables.
 
 ```bash
-pwgen -1 35 | tee ~/.forem_selfhost_ansible_vault_password
+mkdir -p ~/.config/forem/
+pwgen -1 35 | tee ~/.config/forem/selfhost_ansible_vault_password
 ```
 
 #### Create Forem Ansible Inventory
