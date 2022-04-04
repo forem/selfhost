@@ -223,7 +223,7 @@
       status_code: 201
     vars:
       create_record:
-          data: "{{ forem_fcos_droplet_info.data.ip_address }}"
+          data: "{{ forem_fcos_droplet_info.data.droplet.networks.v4.0.ip_address }}"
           flags: null
           name: "{{ item }}"
           port: null
@@ -240,10 +240,10 @@
   - name: Output droplet setup message
     ansible.builtin.debug:
       msg:
-        - "The public IPv4 IP Address for {{ app_domain }} is {{ forem_fcos_droplet_info.data.ip_address }}"
-        - "Please add an A entry for {{ app_domain }} that points to {{ forem_fcos_droplet_info.data.ip_address }}"
+        - "The public IPv4 IP Address for {{ app_domain }} is {{ forem_fcos_droplet_info.data.droplet.networks.v4.0.ip_address }}"
+        - "Please add an A entry for {{ app_domain }} that points to {{ forem_fcos_droplet_info.data.droplet.networks.v4.0.ip_address }}"
         - "Example:"
-        - "    {{ app_domain }} IN A {{ forem_fcos_droplet_info.data.ip_address }}"
+        - "    {{ app_domain }} IN A {{ forem_fcos_droplet_info.data.droplet.networks.v4.0.ip_address }}"
         - "Or use these DNS nameservers: {{ dns_record_response.json | community.general.json_query(forem_domain_nameserver_query)| list }} for {{ forem_domain_name }}"
         - "Once you have DNS resolving to this DigitalOcean instance please read the Forem Admin Docs: https://admin.forem.com/"
     vars:
