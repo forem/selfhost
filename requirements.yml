@@ -1,7 +1,7 @@
 ---
 collections:
   - name: community.digitalocean
-    version: 1.0.0
+    version: 1.16.0
   - name: amazon.aws
   - name: community.aws
   - name: google.cloud
