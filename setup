@@ -10,11 +10,18 @@ VAULT_PASSWORD_FILE="${CONFIG_HOME}/selfhost_ansible_vault_password"
 INVENTORY_FILE=inventory/forem/setup.yml
 
 main() {
+  print_step "Verifying that python is available"
+  python=$(command -v python3 || echo -n "")
+  if [ -z "$python" ]; then
+    print_error "Cannot find python, installing..."
+    apt install python3 -y
+  fi
+
   print_step "Verifying that pip is available"
   pip=$(command -v pip3 || echo -n "")
   if [ -z "$pip" ]; then
-    print_error "Cannot find pip, aborting."
-    exit 1
+    print_error "Cannot find pip, installing..."
+    apt install python3-pip -y
   fi
 
   print_step "Installing Python dependencies"
