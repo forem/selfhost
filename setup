@@ -10,6 +10,13 @@ VAULT_PASSWORD_FILE="${CONFIG_HOME}/selfhost_ansible_vault_password"
 INVENTORY_FILE=inventory/forem/setup.yml
 
 main() {
+  print_step "Verifying that pwgen is available"
+  pwgen=$(command -v pwgen || echo -n "")
+  if [ -z "$pwgen" ]; then
+    print_error "Cannot find pwgen, installing..."
+    apt install pwgen -y
+  fi
+  
   print_step "Verifying that python is available"
   python=$(command -v python3 || echo -n "")
   if [ -z "$python" ]; then
