@@ -8,5 +8,5 @@ fcos_format: "qcow2.xz"
 fcos_storage_location: "{{ playbook_dir }}/images"
 fcos_extraction_location: "$HOME/.local/share/libvirt/images"
 fcos_build_url: "https://builds.coreos.fedoraproject.org/streams/{{ fcos_stream }}.json"
-fcos_gpg_key_location: "https://getfedora.org/static/fedora.gpg"
+fcos_gpg_key_location: "https://fedoraproject.org/fedora.gpg"
 fcos_aws_region: us-east-2
