@@ -51,12 +51,6 @@ all:
           postgres_user: forem_production
           postgres_password: "{{ vault_forem_postgres_password }}"
           postgres_host: localhost
-          pusher_app_id: "{{ vault_pusher_app_id }}"
-          pusher_beams_id: "{{ vault_pusher_beams_id }}"
-          pusher_beams_key: "{{ vault_pusher_beams_key }}"
-          pusher_cluster: us2
-          pusher_key: "{{ vault_pusher_key }}"
-          pusher_secret: "{{ vault_pusher_secret }}"
           recaptcha_secret: "{{ vault_recaptcha_secret }}"
           recaptcha_site: "{{ vault_recaptcha_site }}"
           sendgrid_api_key: "{{ vault_sendgrid_api_key }}"
@@ -145,11 +139,6 @@ all:
           vault_honeybadger_api_key:
           vault_honeybadger_js_api_key:
           vault_honeycomb_api_key:
-          vault_pusher_app_id:
-          vault_pusher_beams_id:
-          vault_pusher_beams_key:
-          vault_pusher_key:
-          vault_pusher_secret:
           vault_recaptcha_secret:
           vault_recaptcha_site:
           vault_sendgrid_api_key:
