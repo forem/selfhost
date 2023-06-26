@@ -18,7 +18,7 @@
     fcos_aws_ebs_size: 100
     fcos_aws_profile: forem-selfhost
     butane_cleanup: true
-    ssh_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    ssh_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}" 
 
   roles:
     - preflight
@@ -137,6 +137,7 @@
       key_material: "{{ ssh_key }}"
       profile: "{{ fcos_aws_profile }}"
       region: "{{ fcos_aws_region }}"
+    register: forem_ssh_key
 
   - name: "Create Forem security group for {{ app_domain }}"
     amazon.aws.ec2_group:
@@ -168,40 +169,42 @@
     register: forem_security_group
 
   - name: "Launch Forem instance for {{ app_domain }}"
-    amazon.aws.ec2:
+    amazon.aws.ec2_instance:
       key_name: "forem-{{ app_domain }}"
       region: "{{ fcos_aws_region }}"
       profile: "{{ fcos_aws_profile }}"
-      group: "forem-{{ app_domain }}"
       instance_type: "{{ fcos_aws_size }}"
-      image: "{{ fcos_aws_image }}"
+      image_id: "{{ fcos_aws_image }}"
       wait: yes
       wait_timeout: 500
       vpc_subnet_id: "{{ forem_subnet_info.subnets | map(attribute='id') | list | first }}"
       volumes:
         - device_name: /dev/xvda
-          volume_type: gp2
-          volume_size: "{{ fcos_aws_ebs_size }}"
-          encrypted: yes
-          delete_on_termination: no
-      monitoring: yes
-      assign_public_ip: yes
-      user_data: "{{ butane_boot_ignition_stdout | to_json | string }}"
-      instance_tags:
-        App: "forem"
-        Domain: "{{ app_domain }}"
-        Name: "forem-{{ app_domain }}"
-      count_tag:
+          ebs:
+            volume_type: gp2
+            volume_size: "{{ fcos_aws_ebs_size }}"
+            delete_on_termination: no
+      detailed_monitoring: yes
+      network:
+        assign_public_ip: yes
+        groups: forem-{{ app_domain }}
+
+      security_groups: forem-{{ app_domain }}
+      tags:
         App: "forem"
         Domain: "{{ app_domain }}"
         Name: "forem-{{ app_domain }}"
       exact_count: 1
     register: forem_ec2_instance
 
+  - name: "Print the results of {{ app_domain }} forem_ec2_instance"
+    debug:
+      var: forem_ec2_instance
+
   - name: Wait 300 seconds for port 22 to become open
     wait_for:
       port: 22
-      host: "{{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
+      host: "{{ forem_ec2_instance.instances[0].public_ip_address }}"
       delay: 10
     connection: local
 
@@ -216,8 +219,8 @@
   - name: Output EC2 setup message
     ansible.builtin.debug:
       msg:
-      - "The public IPv4 IP Address for {{ app_domain }} is {{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
-      - "Please add an A entry for {{ app_domain }} that points to {{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
+      - "The public IPv4 IP Address for {{ app_domain }} is {{ forem_ec2_instance.instances[0].public_ip_address }}"
+      - "Please add an A entry for {{ app_domain }} that points to {{ forem_ec2_instance.instances[0].public_ip_address }}"
       - "Example:"
-      - "    {{ app_domain }} IN A {{ forem_ec2_instance.tagged_instances | map(attribute='public_ip') | list | first }}"
+      - "    {{ app_domain }} IN A {{ forem_ec2_instance.instances[0].public_ip_address }}"
       - "Once you have DNS resolving to this EC2 instance please read the Forem Admin Docs: https://admin.forem.com/"
