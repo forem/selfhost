@@ -46,10 +46,6 @@
       profile: "{{ fcos_aws_profile }}"
     register: forem_vpc_info
 
-  - name: "Print the results of {{ app_domain }} forem_vpc_info"
-    debug:
-      var: forem_vpc_info
-
   - name: Set forem_vpc_id fact
     ansible.builtin.set_fact:
       forem_vpc_id: "{{ forem_vpc_info['vpcs'][0]['vpc_id'] }}"
