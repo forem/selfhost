@@ -1,0 +1,20 @@
+name: "CLA"
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened,closed,synchronize]
+  merge_group:
+    branches:
+      - main
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  check_cla:
+    uses: forem/forem/.github/workflows/cla.yml@main
+    secrets: inherit
