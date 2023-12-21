@@ -12,7 +12,7 @@ This is a repo for setting up a free, self-managed install of [Forem](https://gi
   - [Butane](https://coreos.github.io/butane/)
   - [Ignition](https://coreos.github.io/ignition/)
 
-**If a Self-Hosted Forem is not right for you, we offer a fully-managed, enterprise solution called Forem Cloud; no technical setup required. For more information, [please contact us via this form](https://formkeep.com/p/cfa67316d1c12d23ecb3c08b359f944b).**
+**If a Self-Hosted Forem is not right for you, we offer a fully-managed, enterprise solution called Forem Cloud; no technical setup required. For more information, [please contact us via this form](https://www.forem.com/cloud-waitlist).**
 
 For those that want to DIY beyond the scope of this repo, you can use the systemd units in the [Butane template](https://github.com/forem/selfhost/blob/main/playbooks/templates/forem.yml.j2) as an example of how to run Forem without Fedora CoreOS on a Linux distribution that supports systemd, or customize that template to fit your needs or create a bootable Ignition configuration to consume on bare metal or in a custom VM.
 
