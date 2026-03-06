@@ -1,3 +1,4 @@
+# This repo is out of date, and is no longer the best path for self-host. We will update to provide new instructions in near future (Early 2026)
 
 # Forem Self-Host
 This is a repo for setting up a free, self-managed install of [Forem](https://github.com/forem/forem) on a [Fedora CoreOS](https://getfedora.org/en/coreos) VM running on one of a few popular cloud providers (current support for [DigitalOcean](https://www.digitalocean.com/), [AWS](https://aws.amazon.com/), and [Google Cloud](https://cloud.google.com/)). Local development is also supported using a VM on Linux via [QEMU](https://www.qemu.org/).
